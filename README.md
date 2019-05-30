@@ -1,4 +1,4 @@
-#HEXXAGON 2.0
+# HEXXAGON 2.0
 
 This application has been made as accomplishment for exam requirements at University of Debrecen Faculty of Informatics in following subjects:
 - ILDV444 Mesterséges intelligencia alkalmazások
@@ -6,9 +6,9 @@ This application has been made as accomplishment for exam requirements at Univer
 
 After the first release in 2015 the application has been redesigned in 2019.
 
-######Author
+###### Author
 Sandor Kalmanchey, Pti Bsc.
-######E-mail
+###### E-mail
 kalmanczheysandor@gmail.com
-######Neptun code
+###### Neptun code
 Z2J914
