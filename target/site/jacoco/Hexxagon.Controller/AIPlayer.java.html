@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AIPlayer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.Controller</a> &gt; <span class="el_source">AIPlayer.java</span></div><h1>AIPlayer.java</h1><pre class="source lang-java linenums">package Hexxagon.Controller;
+
+import Hexxagon.AI.IOperator;
+import Hexxagon.AI.MinMax;
+import Hexxagon.AI.BoardState;
+import Hexxagon.AI.Heuristic.HeuristicFactory;
+import Support.TError;
+import Hexxagon.AI.IBoardState;
+import Hexxagon.AI.IHeuristicFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Contains methods of an artificial player.
+ *
+ * @author Sandor Kalmanchey
+ * @version 1.0
+ * @since 1.0
+ */
+final public class AIPlayer extends Player implements IAIPlayer {
+
+    /**
+     * The logger.
+     */
+<span class="nc" id="L25">    private static final Logger logger = LoggerFactory.getLogger(AIPlayer.class);</span>
+    private Thread StepThrd;
+<span class="nc" id="L27">    private int deepness = 1;</span>
+<span class="nc" id="L28">    private byte symbolOfInactiveCell = -1;</span>
+<span class="nc" id="L29">    private byte symbolOfEmptyCell = 0;</span>
+<span class="nc" id="L30">    private byte symbolOfFirstPlayer = 1;</span>
+<span class="nc" id="L31">    private byte symbolOfSecondPlayer = 2;</span>
+<span class="nc" id="L32">    private IHeuristicFactory heuristicFactory = new HeuristicFactory();</span>
+
+    /**
+     * Creates a {@code AIPlayer} instance.
+     *
+     * @param colorString The colour code of the player.
+     */
+    public AIPlayer(String colorString) {
+<span class="nc" id="L40">        super(colorString);</span>
+<span class="nc" id="L41">        this.isAutoPlayer = true;</span>
+        
+<span class="nc" id="L43">        logger.trace(&quot;AIPlayer constructed!&quot;);</span>
+<span class="nc" id="L44">    }</span>
+
+    /**
+     * Creates a {@code AIPlayer} instance.
+     *
+     * @param colorString The colour code of the player.
+     * @param playerIndex The unique index of the player.
+     */
+    public AIPlayer(String colorString, byte playerIndex) {
+<span class="nc" id="L53">        super(colorString, playerIndex);</span>
+<span class="nc" id="L54">        this.isAutoPlayer = true;</span>
+        
+<span class="nc" id="L56">        logger.trace(&quot;AIPlayer constructed!&quot;);</span>
+<span class="nc" id="L57">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IOperator takeYourStep(byte[][] theBoard) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if(!this.isValidBoard(theBoard)) {</span>
+<span class="nc" id="L66">            throw new TError(&quot;Invalid board was given!&quot;);</span>
+        }
+<span class="nc bnc" id="L68" title="All 4 branches missed.">        if(this.symbolOfFirstPlayer != this.getPlayerIndex() &amp;&amp; this.symbolOfSecondPlayer != this.getPlayerIndex()) {</span>
+<span class="nc" id="L69">            throw new TError(&quot;Invalid player index!&quot;);</span>
+        }
+<span class="nc bnc" id="L71" title="All 12 branches missed.">        if((this.symbolOfInactiveCell == this.symbolOfEmptyCell) || (this.symbolOfInactiveCell == this.symbolOfFirstPlayer) || (this.symbolOfInactiveCell == this.symbolOfSecondPlayer) || (this.symbolOfEmptyCell == this.symbolOfFirstPlayer) || (this.symbolOfEmptyCell == this.symbolOfSecondPlayer) || (this.symbolOfFirstPlayer == this.symbolOfSecondPlayer)) {</span>
+<span class="nc" id="L72">            throw new TError(&quot;Invalid property value!&quot;);</span>
+        }
+
+        // Convert and store value
+<span class="nc" id="L76">        byte[][] board = this.boardConvertter(theBoard);</span>
+
+        // Determine offered and enemy plaer indexes
+<span class="nc" id="L79">        byte offeredPlayerIndex = this.symbolOfFirstPlayer;</span>
+<span class="nc" id="L80">        byte enemyPlayerIndex = this.symbolOfSecondPlayer;</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if(this.symbolOfSecondPlayer == this.getPlayerIndex()) {</span>
+<span class="nc" id="L82">            offeredPlayerIndex = this.symbolOfSecondPlayer;</span>
+<span class="nc" id="L83">            enemyPlayerIndex = this.symbolOfFirstPlayer;</span>
+        }
+<span class="nc" id="L85">        logger.debug(&quot;Offered:&quot; + offeredPlayerIndex + &quot;; enemy:&quot; + enemyPlayerIndex);</span>
+        // Create board sate
+<span class="nc" id="L87">        IBoardState boardState = new BoardState(board, offeredPlayerIndex);</span>
+
+<span class="nc" id="L89">        logger.debug(boardState.toString());</span>
+        // Calculate next step
+<span class="nc" id="L91">        return MinMax.takeOffer(boardState, this.heuristicFactory, this.deepness, offeredPlayerIndex, enemyPlayerIndex);</span>
+
+    }
+
+    /**
+     * Tells whether the given board is valid or not.
+     *
+     * @param board The board to be tested.
+     *
+     * @return True if the board is a valid one, false otherwise.
+     */
+    private boolean isValidBoard(byte[][] board) {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        for(int columnIndex = 0; columnIndex &lt; board.length; columnIndex++) {</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            for(int rowIndex = 0; rowIndex &lt; board[columnIndex].length; rowIndex++) {</span>
+<span class="nc" id="L105">                byte value = board[columnIndex][rowIndex];</span>
+
+<span class="nc bnc" id="L107" title="All 8 branches missed.">                if((value != this.symbolOfInactiveCell) &amp;&amp; (value != this.symbolOfEmptyCell) &amp;&amp; (value != this.symbolOfFirstPlayer) &amp;&amp; (value != this.symbolOfSecondPlayer)) {</span>
+<span class="nc" id="L108">                    return false;</span>
+                }
+            }
+        }
+<span class="nc" id="L112">        return true;</span>
+    }
+
+    private byte[][] boardConvertter(byte[][] board) throws TError {
+<span class="nc" id="L116">        byte[][] output = null;</span>
+
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        for(int columnIndex = 0; columnIndex &lt; board.length; columnIndex++) {</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            for(int rowIndex = 0; rowIndex &lt; board[columnIndex].length; rowIndex++) {</span>
+                // Instantiation of the new array
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                if(output == null) {</span>
+<span class="nc" id="L122">                    output = new byte[board.length][board[columnIndex].length];</span>
+                }
+
+                // Check and convert values
+<span class="nc" id="L126">                byte value = board[columnIndex][rowIndex];</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                if(value == this.symbolOfInactiveCell) {</span>
+<span class="nc" id="L128">                    output[columnIndex][rowIndex] = IBoardState.symbolOfInactiveCell;</span>
+                }
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                else if(value == this.symbolOfEmptyCell) {</span>
+<span class="nc" id="L131">                    output[columnIndex][rowIndex] = IBoardState.symbolOfEmptyCell;</span>
+                }
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                else if(value == this.symbolOfFirstPlayer) {</span>
+<span class="nc" id="L134">                    output[columnIndex][rowIndex] = IBoardState.symbolOfFirstPlayer;</span>
+                }
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                else if(value == this.symbolOfSecondPlayer) {</span>
+<span class="nc" id="L137">                    output[columnIndex][rowIndex] = IBoardState.symbolOfSecondPlayer;</span>
+                }
+                else {
+<span class="nc" id="L140">                    throw new TError(&quot;Unexpected board value was found at [&quot; + columnIndex + &quot;][&quot; + rowIndex + &quot;]!&quot;);</span>
+                }
+            }
+        }
+
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if(output == null) {</span>
+<span class="nc" id="L146">            throw new TError(&quot;Unexpected null value was found!&quot;);</span>
+        }
+
+<span class="nc" id="L149">        return output;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setDeepness(int deepness) throws TError {
+<span class="nc" id="L157">        this.deepness = deepness;</span>
+<span class="nc" id="L158">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

@@ -1,0 +1,17 @@
+Hexxagon\AI\MinMaxTest.class
+Window\ContainerTest.class
+Hexxagon\AI\HeuristicTest.class
+Hexxagon\AI\JumpOperatorTest.class
+Support\TItemTest.class
+Window\StorageTest.class
+Hexxagon\controller\AIPlayerTest.class
+Hexxagon\model\GamePlayTest.class
+Hexxagon\controller\GameControllerTest.class
+Hexxagon\model\GameDataTest.class
+Hexxagon\AI\BoardStateTest.class
+Hexxagon\controller\HumanPlayerTest.class
+Hexxagon\vvv.class
+Window\TSelectItemTest.class
+Hexxagon\AI\FissionOperatorTest.class
+Hexxagon\controller\PlayerTest.class
+Hexxagon\AI\ImpossibleOperatorTest.class

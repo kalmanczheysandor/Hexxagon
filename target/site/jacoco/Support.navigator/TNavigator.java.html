@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TNavigator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Support.navigator</a> &gt; <span class="el_source">TNavigator.java</span></div><h1>TNavigator.java</h1><pre class="source lang-java linenums">package Support.navigator;
+
+import Support.TError;
+import Support.mvc.IView;
+import Support.mvc.TController;
+import java.util.ArrayList;
+import javafx.scene.Node;
+import javafx.scene.layout.Pane;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+/**
+ * Contains generalised method implementations of navigator components specified by {@code INavigator} interface.
+ *
+ * @author Sandor Kalmanchey
+ * @version 1.0
+ * @since 1.0
+ */
+public abstract class TNavigator extends TController implements INavigator {
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L23">    private static final Logger logger = LoggerFactory.getLogger(TNavigator.class);</span>
+ 
+    /**
+     * Contains the attached page components.
+     */
+<span class="fc" id="L28">    private ArrayList&lt;IPage&gt; pageList = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Contains the unique page index of page displayed.
+     */
+<span class="fc" id="L33">    private int actulaPageIndex = -1;</span>
+
+    /**
+     * Reference to the outside graphical root node.
+     */
+    private Object rootNode;
+
+    /**
+     * Creates a {@code TNavigator} instance.
+     * @param rootNode The graphical node to where other nodes instantiated here will be attached.
+     */
+<span class="fc" id="L44">    public TNavigator(Pane rootNode) {</span>
+<span class="fc" id="L45">        this.rootNode = rootNode;</span>
+<span class="fc" id="L46">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addPage(IPage page) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if(page == null) {</span>
+<span class="nc" id="L55">            throw new TError(&quot;Property should not be null!&quot;);</span>
+        }
+
+        // Determine page index
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if(this.pageList.add(page)) {</span>
+<span class="nc" id="L60">            int uniquePageIndex = this.pageList.size() - 1;</span>
+<span class="nc" id="L61">            page.setPageIndex(uniquePageIndex);</span>
+<span class="nc" id="L62">            page.setNavigator(this);</span>
+
+<span class="nc" id="L64">            this.actulaPageIndex = uniquePageIndex;</span>
+
+<span class="nc" id="L66">            this.addView((IView) page);          // Because of TView</span>
+<span class="nc" id="L67">            page.onInit();</span>
+<span class="nc" id="L68">        }</span>
+        else {
+<span class="nc" id="L70">            throw new TError(&quot;Page adding was not successfull!&quot;);</span>
+        }
+<span class="nc" id="L72">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void showActualPage() throws TError {
+        // Input checkings
+<span class="nc bnc" id="L80" title="All 4 branches missed.">        if(this.actulaPageIndex == -1 || this.pageList.isEmpty()) {</span>
+<span class="nc" id="L81">            throw new TError(&quot;There is no page added yet!&quot;);</span>
+        }
+<span class="nc" id="L83">        logger.debug(&quot;showActualPage:::&quot; + this.actulaPageIndex);</span>
+        //
+<span class="nc" id="L85">        this.showAPage(this.actulaPageIndex);</span>
+<span class="nc" id="L86">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void showAPage(int pageIndex) throws TError {
+        // Input checkings
+<span class="pc bpc" id="L94" title="2 of 4 branches missed.">        if(pageIndex &lt; 0 || pageIndex &gt; (this.pageList.size() - 1)) {</span>
+<span class="fc" id="L95">            throw new TError(&quot;The requested page index[&quot; + pageIndex + &quot;] is out of the actual range&quot;);</span>
+        }
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if(!this.isPageExists(pageIndex)) {</span>
+<span class="nc" id="L98">            throw new TError(&quot;The requested page at index[&quot; + pageIndex + &quot;] was not found!&quot;);</span>
+        }
+
+        // Remove previous one
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        for(IPage item : this.getPageList()) {</span>
+<span class="nc" id="L103">            Node childNode = (Node) item.getPageContentNode();</span>
+<span class="nc" id="L104">            Pane parentNode = (Pane) item.getParentNode();</span>
+
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if(parentNode.getChildren().contains(childNode)) {</span>
+<span class="nc" id="L107">                parentNode.getChildren().remove(childNode);</span>
+            }
+<span class="nc" id="L109">        }</span>
+
+        // Find page
+<span class="nc" id="L112">        IPage page = this.getPage(pageIndex);</span>
+
+        // Remove previous one and add the new one
+<span class="nc" id="L115">        page.onDraw();</span>
+<span class="nc" id="L116">        page.display();</span>
+
+<span class="nc" id="L118">        this.setActulaPageIndex(pageIndex);</span>
+
+<span class="nc" id="L120">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IPage getPage(int pageIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L128" title="All 4 branches missed.">        if(pageIndex &lt; 0 || pageIndex &gt; (this.pageList.size() - 1)) {</span>
+<span class="nc" id="L129">            throw new TError(&quot;The requested page index[&quot; + pageIndex + &quot;] is out of the actual range&quot;);</span>
+        }
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        if(!this.isPageExists(pageIndex)) {</span>
+<span class="nc" id="L132">            throw new TError(&quot;The requested page at index[&quot; + pageIndex + &quot;] was not found!&quot;);</span>
+        }
+
+<span class="nc" id="L135">        return this.pageList.get(pageIndex);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isPageExists(int pageIndex) {
+<span class="nc bnc" id="L143" title="All 2 branches missed.">        if(pageIndex &lt; this.pageList.size()) {</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">            if(this.pageList.get(pageIndex) != null) {</span>
+<span class="nc" id="L145">                return true;</span>
+            }
+        }
+<span class="nc" id="L148">        return false;</span>
+    }
+
+    /**
+     * Sets the index of page selected to be displayed.
+     *
+     * @param actulaPageIndex The unique index of page.
+     */
+    private void setActulaPageIndex(int actulaPageIndex) {
+<span class="nc" id="L157">        this.actulaPageIndex = actulaPageIndex;</span>
+<span class="nc" id="L158">    }</span>
+
+    /**
+     * Retrieves the list of added page components.
+     *
+     * @return The array list of added page components.
+     */
+    protected final ArrayList&lt;IPage&gt; getPageList() {
+<span class="nc" id="L166">        return pageList;</span>
+    }
+
+    /**
+     * Retrieves the outside graphical root node.
+     *
+     * @return Reference to the outside node object.
+     */
+    protected final Object getRootNode() {
+<span class="nc" id="L175">        return rootNode;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

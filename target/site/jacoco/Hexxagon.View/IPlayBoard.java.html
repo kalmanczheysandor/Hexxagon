@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IPlayBoard.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.View</a> &gt; <span class="el_source">IPlayBoard.java</span></div><h1>IPlayBoard.java</h1><pre class="source lang-java linenums">package Hexxagon.View;
+
+import Support.TError;
+
+/**
+ * Contains method specifications of board view component of game.
+ *
+ * @author Sandor Kalmanchey
+ * @version 2.0
+ * @since 2.0
+ */
+public interface IPlayBoard {
+
+    /**
+     * Relative path of folder of css files.
+     */
+    public static final String folderCSS = &quot;css&quot;;
+    /**
+     * Relative path of folder of image files.
+     */
+    public static final String folderImage = &quot;image&quot;;
+    /**
+     * Relative path of folder of audio files.
+     */
+    public static final String folderAudio = &quot;audio&quot;;
+
+    /**
+     * Contains different reasons why the game was finished.
+     */
+<span class="nc" id="L30">    public static enum FinishCodeEnum {</span>
+        /**
+         * When the game was finished due to having no more unoccupied cell.
+         */
+<span class="nc" id="L34">        BoardFull,</span>
+        /**
+         * When the game was finished due to the enemy having no more unoccupied cell to reach.
+         */
+<span class="nc" id="L38">        EnemyBlocked,</span>
+        /**
+         * When the game was finished due to the enemy lousing all its balls.
+         */
+<span class="nc" id="L42">        EnemyFall</span>
+    };
+
+    /**
+     * Displays the view component.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void show() throws TError;
+
+    /**
+     * Sops to display the component.
+     */
+    public void hide();
+
+    /**
+     * Refreshes the component.
+     * When component is refreshed than it rereads all data from data layer.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void refresh() throws TError;
+
+    /**
+     *
+     */
+    //public void refreshInfoPanels();
+    /**
+     * Displays animation when not the allowed player clicks on board.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     */
+    public void animateWhenNotAllowedPlayerClickedOnAPit(int columnIndex, int rowIndex);
+
+    /**
+     * Displays animation when the click was occurred outside the attack zone.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     */
+    public void animateWhenClickedOutsideOfAttackZone(int columnIndex, int rowIndex);
+
+    /**
+     * Displays animation of attack zone when a cell is selected.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void animateAsAttackZone(int columnIndex, int rowIndex) throws TError;
+
+    /**
+     * Stops animation of showing attack zone.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void removeAllAttackZone() throws TError;
+
+    /**
+     * Displays animation when a cell is occupied by a player.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     * @param playerIndex The unique index of player who occupies the cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void animatePitWhenCapturedByPlayer(int columnIndex, int rowIndex, byte playerIndex) throws TError;
+
+    /**
+     * Displays animation when cells are assimilitated to the occupied cells.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     * @param playerIndex The unique index of player who occupies the cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void animatePitWhenCapturedInLocalArea(int columnIndex, int rowIndex, byte playerIndex) throws TError;
+
+    /**
+     * Displays animation when a cell becomes unoccupied.
+     *
+     * @param columnIndex Column index of cell.
+     * @param rowIndex    Row index of cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void animatePitWhenAbandon(int columnIndex, int rowIndex) throws TError;
+
+    /**
+     * Displays a dialog which shows the winer player.
+     *
+     * @param caseCode    An {@code FinishCodeEnum} enum which represents the reason
+     * @param winnerIndex Unique index of player.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void showEndGameDialog(FinishCodeEnum caseCode, byte winnerIndex) throws TError;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

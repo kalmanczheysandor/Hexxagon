@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GamePlay.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.Model</a> &gt; <span class="el_source">GamePlay.java</span></div><h1>GamePlay.java</h1><pre class="source lang-java linenums">package Hexxagon.Model;
+
+import Hexxagon.Model.IGamePlay.StatusCode;
+import Support.TError;
+import java.util.ArrayList;
+import java.util.Objects;
+import Hexxagon.Controller.IPlayer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * It stores the actual state of the game board
+ *
+ * @author Sandor Kalmanchey
+ * @version 2.0 (1.0)
+ * @since 2015-05-20 (1.0)
+ * @since 2019-04-11 (2.0)
+ */
+public final class GamePlay implements IGamePlay {
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L24">    private static final Logger logger = LoggerFactory.getLogger(GamePlay.class);</span>
+    /**
+     * List of the player instances participate in the game.
+     */
+<span class="pc" id="L28">    private ArrayList&lt;IPlayer&gt; playerList = new ArrayList&lt;IPlayer&gt;();</span>
+
+    /**
+     * The unique index of the player permitted to do the next step.
+     */
+<span class="pc" id="L33">    private byte allowedPlayerIndex = Byte.MIN_VALUE;</span>
+
+    /**
+     * Representation in the data layer of the board cells.
+     */
+    //private ArrayList&lt;IGamePlayField&gt; fieldList = new ArrayList&lt;IGamePlayField&gt;();
+    /**
+     * Stores the pattern of the game board.
+     */
+    private byte[][] stands;
+    /**
+     * Reference to the data field of cell previously clicked.
+     */
+    private IField previouslyClickedField;
+
+    /**
+     * The unique index of the player permitted to do touch the board.
+     * ???????????
+     */
+    //private byte initialStepPlayerIndex = Byte.MIN_VALUE;
+    /**
+     * True if game is finished otherwise false
+     */
+<span class="pc" id="L56">    private boolean isFinished = false;</span>
+
+    /**
+     * It stores the status code of the game
+     */
+    private StatusCode gamePlayStatus;
+
+    /**
+     * Creates a {@code GamePlay} instance.
+     *
+     * @param stands It is an byte[][] array which stores the states of the stands.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+<span class="nc" id="L70">    private GamePlay(byte[][] stands) throws TError {</span>
+<span class="nc" id="L71">        this.initialise();</span>
+
+        // Input checkings
+<span class="nc" id="L74">        this.testAndThrowIfStandsInvalid(stands);</span>
+
+        // Store the values
+<span class="nc" id="L77">        this.previouslyClickedField = null;</span>
+<span class="nc" id="L78">        this.stands = stands;</span>
+        
+<span class="nc" id="L80">        logger.trace(&quot;GamePlay constructed!&quot;);</span>
+
+<span class="nc" id="L82">    }</span>
+
+    /**
+     * Creates a {@code GamePlay} instance.
+     */
+<span class="fc" id="L87">    public GamePlay() {</span>
+<span class="fc" id="L88">        this.initialise();</span>
+<span class="fc" id="L89">        this.previouslyClickedField = null;</span>
+<span class="fc" id="L90">    }</span>
+
+    private void initialise() {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        for(byte playerIndex = IGamePlay.minimumExpectedPlayerIndex; playerIndex &lt;= IGamePlay.maximumExpectedPlayerIndex; playerIndex++) {</span>
+<span class="fc" id="L94">            this.playerList.add(playerIndex - 1, null);</span>
+        }
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * Method to ease the input checking of board shape.
+     *
+     * @param stands the pattern array of board shape.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void testAndThrowIfStandsInvalid(byte[][] stands) throws TError {
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        if(stands == null) {</span>
+<span class="fc" id="L107">            throw new TError(&quot;Parameter 'stands' should not be null!&quot;);</span>
+        }
+
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        if(stands.length != GamePlay.maximumExpectedStandColumnIndex + 1) {</span>
+<span class="fc" id="L111">            throw new TError(&quot;The count of items allocated in first dimension of parameter 'stands' should be &quot; + (GamePlay.maximumExpectedStandColumnIndex + 1) + &quot;!&quot;);</span>
+        }
+
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt;= GamePlay.maximumExpectedStandColumnIndex; columnIndex++) {</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if(stands[columnIndex].length != GamePlay.maximumExpectedStandRowIndex + 1) {</span>
+<span class="fc" id="L116">                throw new TError(&quot;The count of items allocated in second dimension of parameter 'stands' should be &quot; + (GamePlay.maximumExpectedStandRowIndex + 1) + &quot; at the index of '&quot; + columnIndex + &quot;'!&quot;);</span>
+            }
+
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt;= GamePlay.maximumExpectedStandRowIndex; rowIndex++) {</span>
+<span class="fc" id="L120">                byte cellValue = stands[columnIndex][rowIndex];</span>
+
+<span class="pc bpc" id="L122" title="1 of 4 branches missed.">                if(cellValue != -1 &amp;&amp; cellValue != 0) {</span>
+<span class="pc bpc" id="L123" title="2 of 4 branches missed.">                    if(cellValue &lt; IGamePlay.minimumExpectedPlayerIndex || cellValue &gt; IGamePlay.maximumExpectedPlayerIndex) {</span>
+<span class="nc" id="L124">                        throw new TError(&quot;Player index should be allocated in the allowed range which is from &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot; to &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot;!&quot;);</span>
+                    }
+
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">                    if(this.playerList.get(cellValue - 1) == null) {</span>
+<span class="nc" id="L128">                        throw new TError(&quot;No player exists at specified index&quot; + cellValue + &quot;!&quot;);</span>
+                    }
+                }
+            }
+        }
+<span class="fc" id="L133">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final ArrayList&lt;IPlayer&gt; getPlayerList() {
+<span class="fc" id="L140">        return playerList;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void setPlayerList(ArrayList&lt;IPlayer&gt; list) throws TError {
+        // Input checkings
+<span class="fc bfc" id="L149" title="All 2 branches covered.">        if(list == null) {</span>
+<span class="fc" id="L150">            throw new TError(&quot;Parameter shold not be null!&quot;);</span>
+        }
+
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        for(IPlayer aPlayer : list) {</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">            if(list.lastIndexOf(aPlayer) != list.indexOf(aPlayer)) {</span>
+<span class="fc" id="L155">                throw new TError(&quot;Each playerIndex sholuld be unique!&quot;);</span>
+            }
+
+<span class="pc bpc" id="L158" title="2 of 4 branches missed.">            if(aPlayer.getPlayerIndex() &lt; IGamePlay.minimumExpectedPlayerIndex || aPlayer.getPlayerIndex() &gt; IGamePlay.maximumExpectedPlayerIndex) {</span>
+<span class="nc" id="L159">                throw new TError(&quot;Player index should be allocated in the allowed range whicch is from &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot; to &quot; + IGamePlay.maximumExpectedPlayerIndex + &quot;!&quot;);</span>
+            }
+<span class="fc" id="L161">        }</span>
+
+        // Store values
+<span class="fc" id="L164">        this.playerList = list;</span>
+<span class="fc" id="L165">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final byte getAllowedPlayerIndex() {
+<span class="nc" id="L172">        return allowedPlayerIndex;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void setAllowedPlayerIndex(byte allowedPlayerIndex) throws TError {
+
+        // Input checkings
+<span class="pc bpc" id="L182" title="1 of 4 branches missed.">        if(allowedPlayerIndex &lt; IGamePlay.minimumExpectedPlayerIndex || allowedPlayerIndex &gt; IGamePlay.maximumExpectedPlayerIndex) {</span>
+<span class="fc" id="L183">            throw new TError(&quot;Player index should be allocated in the allowed range whicch is from &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot; to &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot;!&quot;);</span>
+        }
+
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        if(this.playerList.get(allowedPlayerIndex - 1) == null) {</span>
+<span class="nc" id="L187">            throw new TError(&quot;No paleyer is stored at specified playerIndex!&quot;);</span>
+        }
+
+        // Store the value
+<span class="fc" id="L191">        this.allowedPlayerIndex = allowedPlayerIndex;</span>
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    /*@Override
+    public final ArrayList&lt;IGamePlayField&gt; getFieldList() {
+        return fieldList;
+    }*/
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final byte[][] getStands() {
+<span class="fc" id="L206">        return stands;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void setBoard(byte[][] stands) throws TError {
+        // Input checkings
+<span class="fc" id="L215">        this.testAndThrowIfStandsInvalid(stands);</span>
+
+        /*// Generating and storing of stands according to the stands
+        this.fieldList.clear();
+
+        for(int columnIndex = 0; columnIndex &lt;= IGamePlay.maximumExpectedStandColumnIndex; columnIndex++) {
+
+            for(int rowIndex = 0; rowIndex &lt;= IGamePlay.maximumExpectedStandRowIndex; rowIndex++) {
+                //     
+                Field field = new Field(columnIndex, rowIndex);
+                this.fieldList.add(field);
+
+                // If board shape contains 0 than field should be inactivated
+                if(stands[columnIndex][rowIndex] == 0) {
+                    field.setIsInactive(true);
+                }
+            }
+        }*/
+        // Store stands pattern
+<span class="fc" id="L234">        this.stands = stands;</span>
+
+<span class="fc" id="L236">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final IField getPreviouslyClickedField() {
+<span class="nc" id="L243">        return previouslyClickedField;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void setPreviouslyClickedField(IField previouslyClickedField) {
+<span class="nc" id="L251">        this.previouslyClickedField = previouslyClickedField;</span>
+<span class="nc" id="L252">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isPlayerExists(byte playerIndex) {
+<span class="pc bpc" id="L259" title="1 of 4 branches missed.">        if(playerIndex &lt; IGamePlay.minimumExpectedPlayerIndex || playerIndex &gt; IGamePlay.maximumExpectedPlayerIndex) {</span>
+<span class="fc" id="L260">            return false;</span>
+        }
+
+<span class="pc bpc" id="L263" title="1 of 2 branches missed.">        if(this.playerList.get(playerIndex - 1) == null) {</span>
+<span class="nc" id="L264">            return false;</span>
+        }
+<span class="fc" id="L266">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addPlayer(IPlayer player, byte playerIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L275" title="All 4 branches missed.">        if(playerIndex &lt; IGamePlay.minimumExpectedPlayerIndex || playerIndex &gt; IGamePlay.maximumExpectedPlayerIndex) {</span>
+<span class="nc" id="L276">            throw new TError(&quot;Player index should be allocated in the allowed range whicch is from &quot; + IGamePlay.minimumExpectedPlayerIndex + &quot; to &quot; + IGamePlay.maximumExpectedPlayerIndex + &quot;! I was:&quot; + playerIndex);</span>
+        }
+
+<span class="nc bnc" id="L279" title="All 2 branches missed.">        if(this.playerList.get(playerIndex - 1) != null) {</span>
+<span class="nc" id="L280">            throw new TError(&quot;The player index is in use already!&quot;);</span>
+        }
+
+        // Store the player and his index
+<span class="nc" id="L284">        player.setPlayerIndex(playerIndex);</span>
+<span class="nc" id="L285">        this.playerList.set(playerIndex - 1, player);</span>
+
+        // if allowedPlayerIndex is not determined
+<span class="nc" id="L288">        this.allowedPlayerIndex = playerIndex;</span>
+
+        // Set the pieces onto the occupied positions
+        //int rowIndex, columnIndex;
+        /* for(int i = 0; i &lt; occupiedPositions.length; i++) {
+            // Input checking
+            if(occupiedPositions[i].length != 2) {
+                throw new TError(&quot;Invalid data format!&quot;);
+            }
+
+            columnIndex = occupiedPositions[i][0];
+            rowIndex = occupiedPositions[i][1];
+
+            IField field = this.getField(columnIndex, rowIndex);
+            if(field != null) {
+                field.setPlayerIndex(playerIndex);
+            }
+        }*/
+<span class="nc" id="L306">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isStandExists(int columnIndex, int rowIndex) {
+<span class="fc bfc" id="L313" title="All 4 branches covered.">        if(columnIndex &lt; 0 || columnIndex &gt; GamePlay.maximumExpectedStandColumnIndex) {</span>
+<span class="fc" id="L314">            return false;</span>
+        }
+
+<span class="fc bfc" id="L317" title="All 4 branches covered.">        if(rowIndex &lt; 0 || rowIndex &gt; GamePlay.maximumExpectedStandRowIndex) {</span>
+<span class="fc" id="L318">            return false;</span>
+        }
+
+<span class="fc" id="L321">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final IField getField(int columnIndex, int rowIndex) throws TError {
+<span class="fc bfc" id="L329" title="All 4 branches covered.">        if(columnIndex &lt; 0 || columnIndex &gt; GamePlay.maximumExpectedStandColumnIndex) {</span>
+<span class="fc" id="L330">            throw new TError(&quot;The value of specified property 'columnIndex' is out of the allowed range. It was &quot; + columnIndex + &quot;!&quot;);</span>
+        }
+
+<span class="fc bfc" id="L333" title="All 4 branches covered.">        if(rowIndex &lt; 0 || rowIndex &gt; GamePlay.maximumExpectedStandRowIndex) {</span>
+<span class="fc" id="L334">            throw new TError(&quot;The value of specified property 'rowIndex' is out of the allowed range. It was &quot; + rowIndex + &quot;!&quot;);</span>
+        }
+
+<span class="fc" id="L337">        byte standValue = this.stands[columnIndex][rowIndex];</span>
+        IField field;
+<span class="pc bpc" id="L339" title="1 of 2 branches missed.">        if(standValue == 0) { // If position is not occupied</span>
+<span class="nc" id="L340">            field = new Field(columnIndex, rowIndex);</span>
+<span class="nc" id="L341">            field.setIsInactive(false);</span>
+<span class="nc" id="L342">            field.setPlayerIndex((byte) 0);</span>
+        }
+<span class="pc bpc" id="L344" title="1 of 2 branches missed.">        else if(standValue == -1) { // If position is inactive</span>
+<span class="nc" id="L345">            field = new Field(columnIndex, rowIndex);</span>
+<span class="nc" id="L346">            field.setIsInactive(true);</span>
+<span class="nc" id="L347">            field.setPlayerIndex((byte) 0);</span>
+        }
+        else {  // Occupied by a player
+<span class="fc" id="L350">            field = new Field(columnIndex, rowIndex);</span>
+<span class="fc" id="L351">            field.setIsInactive(false);</span>
+<span class="fc" id="L352">            field.setPlayerIndex(standValue);</span>
+        }
+
+<span class="fc" id="L355">        return field;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isFinished() {
+<span class="nc" id="L363">        return isFinished;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setIsFinished(boolean isFinished) {
+<span class="nc" id="L371">        this.isFinished = isFinished;</span>
+<span class="nc" id="L372">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setGamePlayStatus(StatusCode newStatus) {
+<span class="nc" id="L379">        this.gamePlayStatus = newStatus;</span>
+<span class="nc" id="L380">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public StatusCode getStatus() {
+<span class="nc" id="L387">        return this.gamePlayStatus;</span>
+    }
+
+    /**
+     * A game play consists of stands and other data. This class implements the
+     * data part of the so called stands or pits represented on the board.
+     *
+     * @author Sándor Kálmánchey
+     * @version 2.0
+     * @since 2015-05-20 (1.0)
+     * @since 2019-04-11 (2.0)
+     */
+    public final static class Field implements IField {
+
+        /**
+         * It stores the index of player occupied the cell.
+         */
+<span class="fc" id="L404">        private byte playerIndex = 0;</span>
+        /**
+         * The column index of the cell.
+         */
+<span class="fc" id="L408">        private int columnIndex = 0;</span>
+        /**
+         * the row index of the cell.
+         */
+<span class="fc" id="L412">        private int rowIndex = 0;</span>
+
+        /**
+         * It stores wether the cell is occupieable.
+         *
+         */
+<span class="fc" id="L418">        private boolean isInactive = false;</span>
+
+        /**
+         *
+         * @param columnIndex Column index of the cell
+         * @param rowIndex    Row index of the cell
+         *
+         * @throws TError If error occurs
+         */
+<span class="fc" id="L427">        public Field(int columnIndex, int rowIndex) throws TError {</span>
+            // Input checkings
+<span class="pc bpc" id="L429" title="2 of 4 branches missed.">            if((columnIndex &lt; 0) || (columnIndex &gt; IGamePlay.maximumExpectedStandColumnIndex)) {</span>
+<span class="nc" id="L430">                throw new TError(&quot;Value of parameter 'columnIndex' should be between 0 and &quot; + IGamePlay.maximumExpectedStandColumnIndex + &quot; but it was &quot; + columnIndex);</span>
+            }
+<span class="pc bpc" id="L432" title="2 of 4 branches missed.">            if((rowIndex &lt; 0) || (rowIndex &gt; IGamePlay.maximumExpectedStandRowIndex)) {</span>
+<span class="nc" id="L433">                throw new TError(&quot;Value of parameter 'rowIndex' should be between 0 and &quot; + IGamePlay.maximumExpectedStandRowIndex + &quot; but it was &quot; + rowIndex);</span>
+            }
+
+            // Store values
+<span class="fc" id="L437">            this.columnIndex = columnIndex;</span>
+<span class="fc" id="L438">            this.rowIndex = rowIndex;</span>
+<span class="fc" id="L439">        }</span>
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void setPlayerIndex(byte playerIndex) {
+<span class="fc" id="L446">            this.playerIndex = playerIndex;</span>
+<span class="fc" id="L447">        }</span>
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public final byte getPlayerIndex() {
+<span class="nc" id="L454">            return playerIndex;</span>
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public final int getColumnIndex() {
+<span class="nc" id="L462">            return columnIndex;</span>
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public final int getRowIndex() {
+<span class="nc" id="L470">            return rowIndex;</span>
+        }
+
+        @Override
+        public boolean isInactive() {
+<span class="nc" id="L475">            return isInactive;</span>
+        }
+
+        @Override
+        public void setIsInactive(boolean isInactive) {
+<span class="fc" id="L480">            this.isInactive = isInactive;</span>
+<span class="fc" id="L481">        }</span>
+
+        /*@Override
+        public boolean equals(Object obj) {
+
+            if(obj == null) {
+                return false;
+            }
+            if(getClass() != obj.getClass()) {
+                //return false;
+            }
+            final Field other = (Field) obj;
+
+            if(!Objects.equals(this.columnIndex, other.columnIndex)) {
+                return false;
+            }
+            if(!Objects.equals(this.rowIndex, other.rowIndex)) {
+                return false;
+            }
+            return true;
+        }*/
+        @Override
+        public boolean equals(Object obj) {
+<span class="pc bpc" id="L504" title="1 of 2 branches missed.">            if(this == obj) {</span>
+<span class="nc" id="L505">                return true;</span>
+            }
+<span class="pc bpc" id="L507" title="1 of 2 branches missed.">            if(obj == null) {</span>
+<span class="nc" id="L508">                return false;</span>
+            }
+<span class="pc bpc" id="L510" title="1 of 2 branches missed.">            if(getClass() != obj.getClass()) {</span>
+<span class="nc" id="L511">                return false;</span>
+            }
+<span class="fc" id="L513">            final Field other = (Field) obj;</span>
+<span class="fc bfc" id="L514" title="All 2 branches covered.">            if(this.playerIndex != other.playerIndex) {</span>
+<span class="fc" id="L515">                return false;</span>
+            }
+<span class="pc bpc" id="L517" title="1 of 2 branches missed.">            if(this.columnIndex != other.columnIndex) {</span>
+<span class="nc" id="L518">                return false;</span>
+            }
+<span class="pc bpc" id="L520" title="1 of 2 branches missed.">            if(this.rowIndex != other.rowIndex) {</span>
+<span class="nc" id="L521">                return false;</span>
+            }
+<span class="pc bpc" id="L523" title="1 of 2 branches missed.">            if(this.isInactive != other.isInactive) {</span>
+<span class="nc" id="L524">                return false;</span>
+            }
+<span class="fc" id="L526">            return true;</span>
+        }
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

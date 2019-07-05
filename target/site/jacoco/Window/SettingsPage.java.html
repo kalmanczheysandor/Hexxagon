@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SettingsPage.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Window</a> &gt; <span class="el_source">SettingsPage.java</span></div><h1>SettingsPage.java</h1><pre class="source lang-java linenums">package Window;
+
+import Main.Main;
+import Support.IItem;
+import Support.TError;
+import java.beans.PropertyChangeEvent;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ComboBoxBuilder;
+import javafx.scene.control.ListCell;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.VBoxBuilder;
+import javafx.scene.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Object instance of this class is responsible for the initialisation and draw of graphical component displayed on settings page.
+ * Contains the implementation of application page/view component specified by {@code ISettingsPage} interface.
+ * The class extends the {@code JFXPage} javaFX specific abstract page class.
+ *
+ * @author Sandor Kalmanchey
+ * @version 1.0
+ * @since 1.0
+ */
+public class SettingsPage extends JFXPage implements ISettingsPage {
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L38">    private static final Logger logger = LoggerFactory.getLogger(SettingsPage.class);</span>
+    /**
+     * Object of back button graphical component.
+     */
+    private Button backButton;
+    /**
+     * Object of play button graphical component.
+     */
+    private Button playButton;
+    /**
+     * Object of board mode select box graphical component.
+     */
+    private ComboBox boardShapeInput;
+    /**
+     * Object of difficulty level select box graphical component.
+     */
+    private ComboBox difficultyLevelInput;
+
+<span class="fc" id="L56">    private static final Image iconTitle = new Image(SettingsPage.class.getResourceAsStream(Main.folderImage + &quot;/title.gif&quot;));</span>
+    private ImageView imageTitle;
+
+    /**
+     * Creates a {@code SettingsPage} instance.
+     *
+     * @param parentNode Outside graphical root node.
+     */
+    public SettingsPage(Object parentNode) {
+<span class="fc" id="L65">        super(parentNode);</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void initComponent() throws TError {
+
+        // Title image
+<span class="nc" id="L75">        imageTitle = new ImageView(iconTitle);</span>
+<span class="nc" id="L76">        imageTitle.setScaleX(0.8);</span>
+<span class="nc" id="L77">        imageTitle.setScaleY(0.8);</span>
+
+        // Component initialisation
+<span class="nc" id="L80">        this.backButton = new Button(&quot;Back&quot;);</span>
+<span class="nc" id="L81">        this.backButton.setOnMouseClicked((event) -&gt; {</span>
+
+            try {
+<span class="nc" id="L84">                this.getContainer().showIntroPage();</span>
+            }
+<span class="nc" id="L86">            catch(TError ex) {</span>
+<span class="nc" id="L87">                logger.error(ex.toString());</span>
+<span class="nc" id="L88">            }</span>
+
+<span class="nc" id="L90">        });</span>
+
+        // Component initialisation
+<span class="nc" id="L93">        this.playButton = new Button(&quot;Play&quot;);</span>
+<span class="nc" id="L94">        this.playButton.setOnMouseClicked((event) -&gt; {</span>
+            try {
+                //this.getContainer().showPlayPage();
+<span class="nc" id="L97">                this.getContainer().startGame();</span>
+            }
+<span class="nc" id="L99">            catch(TError ex) {</span>
+<span class="nc" id="L100">                logger.error(ex.toString());</span>
+<span class="nc" id="L101">            }</span>
+
+<span class="nc" id="L103">        });</span>
+<span class="nc" id="L104">        this.playButton.setDisable(true);</span>
+
+        // Component initialisation
+<span class="nc" id="L107">        ObservableList boardList = FXCollections.observableArrayList();</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        for(IStorage.IBoardModeItem item : this.getContainer().getStorage().getBoardModeList()) {</span>
+<span class="nc" id="L109">            boardList.add(item.getIndex(), item.getCaption());</span>
+<span class="nc" id="L110">        }</span>
+<span class="nc" id="L111">        this.boardShapeInput = ComboBoxBuilder.create().id(&quot;uneditable-combobox&quot;).promptText(&quot;Make a choice...&quot;).items(boardList).build();</span>
+<span class="nc" id="L112">        this.boardShapeInput.setMinWidth(300);</span>
+<span class="nc" id="L113">        this.boardShapeInput.setOnAction((event) -&gt; {</span>
+            try {
+<span class="nc" id="L115">                int selectedKey = this.boardShapeInput.getSelectionModel().getSelectedIndex();</span>
+
+<span class="nc" id="L117">                this.getContainer().selectBoardMode(selectedKey);</span>
+            }
+<span class="nc" id="L119">            catch(TError ex) {</span>
+<span class="nc" id="L120">                logger.error(ex.toString());</span>
+<span class="nc" id="L121">            }</span>
+<span class="nc" id="L122">        });</span>
+<span class="nc" id="L123">        this.boardShapeInput.setButtonCell(new ListCell() {</span>
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+<span class="nc" id="L126">                super.updateItem(item, empty);</span>
+<span class="nc bnc" id="L127" title="All 4 branches missed.">                if(empty || item == null) {</span>
+                    // styled like -fx-prompt-text-fill:
+<span class="nc" id="L129">                    setStyle(&quot;-fx-text-fill: red&quot;);</span>
+                }
+                else {
+<span class="nc" id="L132">                    setStyle(&quot;-fx-text-fill: black&quot;);</span>
+<span class="nc" id="L133">                    setText(item.toString());</span>
+                }
+<span class="nc" id="L135">            }</span>
+
+        });
+
+        // Component initialisation
+<span class="nc" id="L140">        ObservableList difficultyList = FXCollections.observableArrayList();</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        for(TSelectItem item : this.getContainer().getStorage().getDifficultyTypeList()) {</span>
+<span class="nc" id="L142">            difficultyList.add(item.getKey(), item.getCaption());</span>
+<span class="nc" id="L143">        }</span>
+<span class="nc" id="L144">        ObservableList fightTypeList = FXCollections.observableArrayList(&quot;Human player vs human player&quot;, &quot;Human player vs AI player&quot;, &quot;AI player vs AI player&quot;);</span>
+<span class="nc" id="L145">        this.difficultyLevelInput = ComboBoxBuilder.create().id(&quot;uneditable-combobox&quot;).promptText(&quot;Make a choice...&quot;).items(difficultyList).build();</span>
+<span class="nc" id="L146">        this.difficultyLevelInput.setMinWidth(300);</span>
+<span class="nc" id="L147">        this.difficultyLevelInput.setOnAction((event) -&gt; {</span>
+            try {
+<span class="nc" id="L149">                int selectedKey = this.difficultyLevelInput.getSelectionModel().getSelectedIndex();</span>
+
+<span class="nc" id="L151">                this.getContainer().selectDifficulty(selectedKey);</span>
+            }
+<span class="nc" id="L153">            catch(TError ex) {</span>
+<span class="nc" id="L154">                logger.error(ex.toString());</span>
+<span class="nc" id="L155">            }</span>
+<span class="nc" id="L156">        });</span>
+<span class="nc" id="L157">        this.difficultyLevelInput.setDisable(true);</span>
+<span class="nc" id="L158">         this.difficultyLevelInput.setButtonCell(new ListCell() {</span>
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+<span class="nc" id="L161">                super.updateItem(item, empty);</span>
+<span class="nc bnc" id="L162" title="All 4 branches missed.">                if(empty || item == null) {</span>
+                    // styled like -fx-prompt-text-fill:
+<span class="nc" id="L164">                    setStyle(&quot;-fx-text-fill: red&quot;);</span>
+                }
+                else {
+<span class="nc" id="L167">                    setStyle(&quot;-fx-text-fill: black&quot;);</span>
+<span class="nc" id="L168">                    setText(item.toString());</span>
+                }
+<span class="nc" id="L170">            }</span>
+
+        });
+
+<span class="nc" id="L174">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Object drawContent() throws TError {
+
+<span class="nc" id="L182">        StackPane menuPanel = this.createMenuPanel();</span>
+
+<span class="nc" id="L184">        AnchorPane root = new AnchorPane();</span>
+<span class="nc" id="L185">        root.getChildren().add(imageTitle);</span>
+<span class="nc" id="L186">        root.getChildren().add(this.backButton);</span>
+<span class="nc" id="L187">        root.getChildren().add(this.playButton);</span>
+<span class="nc" id="L188">        root.getChildren().add(menuPanel);</span>
+
+        // Anchoring title
+<span class="nc" id="L191">        AnchorPane.setTopAnchor(imageTitle, Double.valueOf(0));</span>
+<span class="nc" id="L192">        AnchorPane.setLeftAnchor(imageTitle, Double.valueOf(10));</span>
+
+        // Anchoring of menupanel
+<span class="nc" id="L195">        AnchorPane.setLeftAnchor(menuPanel, Double.valueOf(0));</span>
+<span class="nc" id="L196">        AnchorPane.setRightAnchor(menuPanel, Double.valueOf(0));</span>
+<span class="nc" id="L197">        AnchorPane.setTopAnchor(menuPanel, Double.valueOf(0));</span>
+<span class="nc" id="L198">        AnchorPane.setBottomAnchor(menuPanel, Double.valueOf(50));</span>
+
+        // Anchoring of back button
+<span class="nc" id="L201">        AnchorPane.setLeftAnchor(this.backButton, Double.valueOf(20));</span>
+<span class="nc" id="L202">        AnchorPane.setBottomAnchor(this.backButton, Double.valueOf(20));</span>
+
+        // Anchoring of play button
+<span class="nc" id="L205">        AnchorPane.setRightAnchor(this.playButton, Double.valueOf(20));</span>
+<span class="nc" id="L206">        AnchorPane.setBottomAnchor(this.playButton, Double.valueOf(20));</span>
+
+        // Set css style
+<span class="nc" id="L209">        root.setId(&quot;RootNode&quot;);</span>
+<span class="nc" id="L210">        return root;</span>
+    }
+
+    /**
+     * Creates the node tree of select boxes.
+     *
+     * @return Reference of the top node of the tree.
+     */
+    private StackPane createMenuPanel() {
+
+        //
+<span class="nc" id="L221">        Text label01 = new Text(&quot;Select a board type&quot;);</span>
+<span class="nc" id="L222">        label01.setId(&quot;Label&quot;);</span>
+
+        //
+<span class="nc" id="L225">        Text label02 = new Text(&quot;Select a fight type&quot;);</span>
+<span class="nc" id="L226">        label02.setId(&quot;Label&quot;);</span>
+
+<span class="nc" id="L228">        VBox centerBox = VBoxBuilder.create().alignment(Pos.CENTER_LEFT).spacing(15).build();</span>
+<span class="nc" id="L229">        centerBox.getChildren().add(label01);</span>
+<span class="nc" id="L230">        centerBox.getChildren().add(this.boardShapeInput);</span>
+<span class="nc" id="L231">        centerBox.getChildren().add(label02);</span>
+<span class="nc" id="L232">        centerBox.getChildren().add(this.difficultyLevelInput);</span>
+<span class="nc" id="L233">        centerBox.setMaxWidth(300);</span>
+
+<span class="nc" id="L235">        StackPane root = new StackPane(centerBox);</span>
+<span class="nc" id="L236">        root.setAlignment(Pos.CENTER);</span>
+
+<span class="nc" id="L238">        return root;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onAfterDraw() throws TError {
+
+<span class="nc" id="L247">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void modelPropertyChange(PropertyChangeEvent evt) throws TError {
+
+        try {
+
+<span class="nc" id="L257">            int boardKey = this.getContainer().getStorage().getSelectedBoardIndex();</span>
+<span class="nc" id="L258">            int fightKey = this.getContainer().getStorage().getSelectedDifficultyIndex();</span>
+
+<span class="nc" id="L260">            boolean isAutoPlayer = false;</span>
+
+<span class="nc bnc" id="L262" title="All 2 branches missed.">            if(boardKey &gt;= 0) {</span>
+<span class="nc" id="L263">                isAutoPlayer = this.getContainer().getStorage().getBoardMode(boardKey).isAIPlayerAdded();</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">                if(isAutoPlayer) {</span>
+<span class="nc" id="L265">                    this.difficultyLevelInput.setDisable(false);</span>
+                }
+                else {
+<span class="nc" id="L268">                    this.difficultyLevelInput.setDisable(true);</span>
+                }
+            }
+
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            if(isAutoPlayer) {</span>
+<span class="nc bnc" id="L273" title="All 4 branches missed.">                if(boardKey &gt;= 0 &amp;&amp; fightKey &gt;= 0) {</span>
+<span class="nc" id="L274">                    this.playButton.setDisable(false);</span>
+                }
+                else {
+<span class="nc" id="L277">                    this.playButton.setDisable(true);</span>
+                }
+            }
+            else {
+<span class="nc bnc" id="L281" title="All 2 branches missed.">                if(boardKey &gt;= 0) {</span>
+<span class="nc" id="L282">                    this.playButton.setDisable(false);</span>
+                }
+                else {
+<span class="nc" id="L285">                    this.playButton.setDisable(true);</span>
+                }
+            }
+        }
+<span class="nc" id="L289">        catch(TError err) {</span>
+<span class="nc" id="L290">            logger.error(err.toString());</span>
+<span class="nc" id="L291">        }</span>
+
+<span class="nc" id="L293">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

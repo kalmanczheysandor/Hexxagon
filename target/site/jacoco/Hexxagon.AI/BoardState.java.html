@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BoardState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.AI</a> &gt; <span class="el_source">BoardState.java</span></div><h1>BoardState.java</h1><pre class="source lang-java linenums">package Hexxagon.AI;
+
+import Support.TError;
+import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Contains the implementation of sate component specified by {@code IBoardState} interface.
+ * The instance of class represents a state of the board caused by operator apply.
+ *
+ * @author Sandor Kalmanchey
+ * @version 1.0
+ * @since 1.0
+ */
+public final class BoardState implements IBoardState {
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L21">    private static final Logger logger = LoggerFactory.getLogger(BoardState.class);</span>
+    /**
+     * Array representation of board.
+     */
+    private byte[][] board;
+    /**
+     * The index of player for who is allowed to do the ongoing step.
+     */
+    private byte actualPlayerIndex;
+
+    /**
+     * Creates a {@code BoardState} instance.
+     *
+     * @param board             A two dimensional array representing the board table. Value must not be null and each cell must contain one of the allowed values (-1,0,1,2) otherwise {@code TError} is thrown.
+     * @param actualPlayerIndex The unique index of player who is allowed to do the ongoing step. Value must be 1 or 2 otherwise {@code TError} is thrown.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+<span class="fc" id="L39">    public BoardState(byte[][] board, byte actualPlayerIndex) throws TError {</span>
+        // Input checkings
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">        if(!BoardState.isValidBoard(board)) {</span>
+<span class="nc" id="L42">            throw new TError(&quot;Invalid board was given!&quot;);</span>
+        }
+<span class="pc bpc" id="L44" title="1 of 4 branches missed.">        if(IBoardState.symbolOfFirstPlayer != actualPlayerIndex &amp;&amp; IBoardState.symbolOfSecondPlayer != actualPlayerIndex) {</span>
+<span class="nc" id="L45">            throw new TError(&quot;Invalid player index!&quot;);</span>
+        }
+        if((IBoardState.symbolOfInactiveCell == IBoardState.symbolOfEmptyCell) || (IBoardState.symbolOfInactiveCell == IBoardState.symbolOfFirstPlayer) || (IBoardState.symbolOfInactiveCell == IBoardState.symbolOfSecondPlayer) || (IBoardState.symbolOfEmptyCell == IBoardState.symbolOfFirstPlayer) || (IBoardState.symbolOfEmptyCell == IBoardState.symbolOfSecondPlayer) || (IBoardState.symbolOfFirstPlayer == IBoardState.symbolOfSecondPlayer)) {
+            throw new TError(&quot;Invalid set of property values!&quot;);
+        }
+
+        // Store values
+<span class="fc" id="L52">        this.board = board;</span>
+<span class="fc" id="L53">        this.actualPlayerIndex = actualPlayerIndex;</span>
+        
+<span class="fc" id="L55">        logger.trace(&quot;BoardState constructed!&quot;);</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Answers whether the board is a valid board.
+     * A board is valid when:
+     * - each cells contains one of the allowed values (-1,0,1,2)
+     * - The length and with of array is equal.
+     *
+     * @param board The board which have to be tested.
+     *
+     * @return True if the board object is a valid one otherwise false.
+     */
+    private static boolean isValidBoard(byte[][] board) {
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; board[columnIndex].length; rowIndex++) {</span>
+<span class="fc" id="L71">                byte value = board[columnIndex][rowIndex];</span>
+<span class="pc bpc" id="L72" title="1 of 8 branches missed.">                if((value != IBoardState.symbolOfInactiveCell) &amp;&amp; (value != IBoardState.symbolOfEmptyCell) &amp;&amp; (value != IBoardState.symbolOfFirstPlayer) &amp;&amp; (value != IBoardState.symbolOfSecondPlayer)) {</span>
+<span class="nc" id="L73">                    return false;</span>
+                }
+            }
+        }
+<span class="fc" id="L77">        return true;</span>
+    }
+
+    /**
+     * Tells whether the player index is a valid one.
+     *
+     * @param playerIndex The player index to validate.
+     *
+     * @return True if the player index is valid false, otherwise.
+     */
+    private static boolean isValidPlayerIndex(byte playerIndex) {
+<span class="fc bfc" id="L88" title="All 4 branches covered.">        if(playerIndex == IBoardState.symbolOfFirstPlayer || playerIndex == IBoardState.symbolOfSecondPlayer) {</span>
+<span class="fc" id="L89">            return true;</span>
+        }
+<span class="fc" id="L91">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isThePlayerHasNoBall(byte playerIndex) throws TError {
+        // Input checkings
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if(!isValidPlayerIndex(playerIndex)) {</span>
+<span class="fc" id="L101">            throw new TError(&quot;Invalid player index value was given!&quot;);</span>
+        }
+
+        // Determination
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {</span>
+
+<span class="fc bfc" id="L108" title="All 2 branches covered.">                if(this.board[columnIndex][rowIndex] == playerIndex) {</span>
+<span class="fc" id="L109">                    return false;</span>
+                }
+
+            }
+        }
+
+<span class="fc" id="L115">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isAnybodyHasNoBall() throws TError {
+
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">        if(this.isThePlayerHasNoBall(IBoardState.symbolOfFirstPlayer) || this.isThePlayerHasNoBall(IBoardState.symbolOfSecondPlayer)) {</span>
+<span class="fc" id="L125">            return true;</span>
+        }
+
+<span class="fc" id="L128">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isBoardFull() {
+
+<span class="fc bfc" id="L137" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">                if(this.board[columnIndex][rowIndex] == IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L140">                    return false;</span>
+                }
+            }
+        }
+
+<span class="fc" id="L145">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isCellEmptyAndActive(int columnIndex, int rowIndex) throws TError {
+        // Input checking 
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        if(!this.isCellExists(columnIndex, rowIndex)) {</span>
+<span class="fc" id="L155">            throw new TError(&quot;The coordinates [&quot; + columnIndex + &quot;,&quot; + rowIndex + &quot;] are out of range!&quot;);</span>
+        }
+
+        // Determine value
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        if(this.getCellValue(columnIndex, rowIndex) == IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L160">            return true;</span>
+        }
+<span class="fc" id="L162">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isCellExists(int columnIndex, int rowIndex) {
+<span class="fc bfc" id="L170" title="All 4 branches covered.">        if(columnIndex &lt; 0 || columnIndex &gt; (this.board.length - 1)) {</span>
+<span class="fc" id="L171">            return false;</span>
+        }
+
+<span class="pc bpc" id="L174" title="1 of 4 branches missed.">        if(rowIndex &lt; 0 || rowIndex &gt; (this.board[columnIndex].length - 1)) {</span>
+<span class="fc" id="L175">            return false;</span>
+        }
+<span class="fc" id="L177">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isCellOccupied(int columnIndex, int rowIndex) throws TError {
+        // Input checking 
+<span class="pc bpc" id="L186" title="1 of 2 branches missed.">        if(!this.isCellExists(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L187">            throw new TError(&quot;The coordinates [&quot; + columnIndex + &quot;,&quot; + rowIndex + &quot;] are out of range!&quot;);</span>
+        }
+
+        // Get value
+<span class="pc bpc" id="L191" title="1 of 4 branches missed.">        if(this.board[columnIndex][rowIndex] == IBoardState.symbolOfFirstPlayer || this.board[columnIndex][rowIndex] == IBoardState.symbolOfSecondPlayer) {</span>
+<span class="fc" id="L192">            return true;</span>
+        }
+<span class="fc" id="L194">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public byte getCellValue(int columnIndex, int rowIndex) throws TError {
+        // Input checking 
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">        if(!this.isCellExists(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L204">            throw new TError(&quot;The coordinates [&quot; + columnIndex + &quot;,&quot; + rowIndex + &quot;] are out of range!&quot;);</span>
+        }
+
+        // Get value
+<span class="fc" id="L208">        return this.board[columnIndex][rowIndex];</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setCellValue(int columnIndex, int rowIndex, byte fieldValue) throws TError {
+
+        // Input checking 
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        if(!this.isCellExists(columnIndex, rowIndex)) {</span>
+<span class="fc" id="L219">            throw new TError(&quot;The coordinates [&quot; + columnIndex + &quot;,&quot; + rowIndex + &quot;] are out of range!&quot;);</span>
+        }
+<span class="pc bpc" id="L221" title="2 of 8 branches missed.">        if((fieldValue != IBoardState.symbolOfInactiveCell) &amp;&amp; (fieldValue != IBoardState.symbolOfEmptyCell) &amp;&amp; (fieldValue != IBoardState.symbolOfFirstPlayer) &amp;&amp; (fieldValue != IBoardState.symbolOfSecondPlayer)) {</span>
+<span class="fc" id="L222">            throw new TError(&quot;Invalid field value was given!&quot;);</span>
+        }
+
+        // Set value
+<span class="fc" id="L226">        this.board[columnIndex][rowIndex] = fieldValue;</span>
+<span class="fc" id="L227">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getEmptyCellCount() {
+
+<span class="fc" id="L235">        int count = 0;</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {</span>
+<span class="fc bfc" id="L238" title="All 2 branches covered.">                if(this.board[columnIndex][rowIndex] == IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L239">                    count++;</span>
+                }
+            }
+        }
+<span class="fc" id="L243">        return count;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getPlayerBallCount(byte playerIndex) throws TError {
+        // Input checking
+<span class="fc bfc" id="L252" title="All 2 branches covered.">        if(!isValidPlayerIndex(playerIndex)) {</span>
+<span class="fc" id="L253">            throw new TError(&quot;Invalid player index value was given!&quot;);</span>
+        }
+
+        // Determine value
+<span class="fc" id="L257">        int count = 0;</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L259" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">                if(this.board[columnIndex][rowIndex] == playerIndex) {</span>
+<span class="fc" id="L261">                    count++;</span>
+                }
+            }
+        }
+<span class="fc" id="L265">        return count;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getActiveCellCount() {
+<span class="fc" id="L273">        int count = 0;</span>
+
+<span class="fc bfc" id="L275" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L276" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {</span>
+<span class="fc bfc" id="L277" title="All 6 branches covered.">                if(this.board[columnIndex][rowIndex] == IBoardState.symbolOfEmptyCell || this.board[columnIndex][rowIndex] == IBoardState.symbolOfFirstPlayer || this.board[columnIndex][rowIndex] == IBoardState.symbolOfSecondPlayer) {</span>
+<span class="fc" id="L278">                    count++;</span>
+                }
+            }
+        }
+<span class="fc" id="L282">        return count;</span>
+    }
+
+    
+    /**
+     * It presents the output as the matrix is written in java code.
+     * @return 
+     */
+    @Override
+    public String toString() {
+
+       
+<span class="nc" id="L294">        String str = &quot;&quot;;</span>
+<span class="nc bnc" id="L295" title="All 2 branches missed.">        for(int rowIndex = 0; rowIndex &lt; this.board.length; rowIndex++) {</span>
+            
+<span class="nc bnc" id="L297" title="All 2 branches missed.">            for(int columnIndex = 0; columnIndex &lt; this.board[rowIndex].length; columnIndex++) {</span>
+
+<span class="nc bnc" id="L299" title="All 5 branches missed.">                switch (this.board[rowIndex][columnIndex]) {</span>
+                    case IBoardState.symbolOfInactiveCell:
+<span class="nc" id="L301">                        str += &quot;*|&quot;;</span>
+<span class="nc" id="L302">                        break;</span>
+                    case IBoardState.symbolOfEmptyCell:
+<span class="nc" id="L304">                        str += &quot;0|&quot;;</span>
+<span class="nc" id="L305">                        break;</span>
+                    case IBoardState.symbolOfFirstPlayer:
+<span class="nc" id="L307">                        str += &quot;1|&quot;;</span>
+<span class="nc" id="L308">                        break;</span>
+                    case IBoardState.symbolOfSecondPlayer:
+<span class="nc" id="L310">                        str += &quot;2|&quot;;</span>
+                        break;
+                }
+
+            }
+<span class="nc" id="L315">            str +=&quot;\n&quot;;</span>
+        }
+<span class="nc" id="L317">        return str;</span>
+    }
+    
+    
+    
+    
+    /*@Override
+    public String toString() {
+
+        String rowsStr = &quot;&quot;;
+        for(int columnIndex = 0; columnIndex &lt; this.board.length; columnIndex++) {
+            String SwapStr = &quot;&quot;;
+            for(int k = 1; k &lt; columnIndex; k++) {
+                SwapStr += &quot;_.&quot;;
+            }
+
+            String AColumnStr = SwapStr;
+
+            for(int rowIndex = 0; rowIndex &lt; this.board[columnIndex].length; rowIndex++) {
+
+                switch (this.board[columnIndex][rowIndex]) {
+                    case IBoardState.symbolOfInactiveCell:
+                        AColumnStr += &quot;*|&quot;;
+                        break;
+                    case IBoardState.symbolOfEmptyCell:
+                        AColumnStr += &quot;0|&quot;;
+                        break;
+                    case IBoardState.symbolOfFirstPlayer:
+                        AColumnStr += &quot;1|&quot;;
+                        break;
+                    case IBoardState.symbolOfSecondPlayer:
+                        AColumnStr += &quot;2|&quot;;
+                        break;
+
+                }
+
+            }
+            rowsStr = AColumnStr + &quot;\n&quot; + rowsStr;
+        }
+        return rowsStr;
+    }
+*/
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public byte[][] getBoard() {
+<span class="fc" id="L364">        return board;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public byte getActualPlayerIndex() {
+<span class="fc" id="L372">        return actualPlayerIndex;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public byte getEnemyPlayerIndex() {
+
+<span class="fc bfc" id="L381" title="All 2 branches covered.">        if(this.actualPlayerIndex == IBoardState.symbolOfFirstPlayer) {</span>
+<span class="fc" id="L382">            return IBoardState.symbolOfSecondPlayer;</span>
+        }
+<span class="fc" id="L384">        return IBoardState.symbolOfFirstPlayer;</span>
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isOperatorInValidRange(IOperator operator) throws TError {
+
+        // Input checkings
+<span class="pc bpc" id="L395" title="1 of 2 branches missed.">        if(operator == null) {</span>
+<span class="nc" id="L396">            throw new TError(&quot;Property sholud not be null!&quot;);</span>
+        }
+
+        // If base cell does not exists
+<span class="pc bpc" id="L400" title="1 of 2 branches missed.">        if(!this.isCellExists(operator.getBaseColumnIndex(), operator.getBaseRowIndex())) {</span>
+<span class="nc" id="L401">            return false;</span>
+        }
+
+        // If target cell does not exists
+<span class="fc bfc" id="L405" title="All 2 branches covered.">        if(!this.isCellExists(operator.getTargetColumnIndex(), operator.getTargetRowIndex())) {</span>
+<span class="fc" id="L406">            return false;</span>
+        }
+
+<span class="fc" id="L409">        return true;</span>
+
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L415" title="1 of 2 branches missed.">        if(this == obj) {</span>
+<span class="nc" id="L416">            return true;</span>
+        }
+<span class="pc bpc" id="L418" title="1 of 2 branches missed.">        if(obj == null) {</span>
+<span class="nc" id="L419">            return false;</span>
+        }
+<span class="pc bpc" id="L421" title="1 of 2 branches missed.">        if(getClass() != obj.getClass()) {</span>
+<span class="nc" id="L422">            return false;</span>
+        }
+<span class="fc" id="L424">        final BoardState other = (BoardState) obj;</span>
+<span class="pc bpc" id="L425" title="1 of 2 branches missed.">        if(this.actualPlayerIndex != other.actualPlayerIndex) {</span>
+<span class="nc" id="L426">            return false;</span>
+        }
+<span class="pc bpc" id="L428" title="1 of 2 branches missed.">        if(!Arrays.deepEquals(this.board, other.board)) {</span>
+<span class="nc" id="L429">            return false;</span>
+        }
+<span class="fc" id="L431">        return true;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

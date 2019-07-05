@@ -1,0 +1,1389 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.Controller</a> &gt; <span class="el_source">GameController.java</span></div><h1>GameController.java</h1><pre class="source lang-java linenums">package Hexxagon.Controller;
+
+import Hexxagon.AI.IOperator;
+import Hexxagon.Model.GamePlay;
+import Hexxagon.Model.IGameData;
+import Hexxagon.Model.IGameData.ProcessStatusCode;
+import Hexxagon.Model.IGamePlay;
+import Hexxagon.Model.IGamePlay.StatusCode;
+import Support.TError;
+import Support.TCoordinate2D;
+import Support.TFailed;
+import Hexxagon.View.IPlayBoard.FinishCodeEnum;
+import Support.mvc.IView;
+import Support.mvc.TController;
+import java.util.ArrayList;
+import Hexxagon.Model.IField;
+import Hexxagon.View.IFaceBoard;
+import Hexxagon.View.IInfoBoard;
+import Hexxagon.View.IPlayBoard;
+import Support.mvc.IModel;
+import java.util.Calendar;
+import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
+import javafx.event.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * It is the controller object of the Hexxagon module.
+ *
+ * @author Sandor Kalmanchey
+ * @version 2.0
+ * @since 1.0
+ */
+<span class="fc" id="L35">public class GameController extends TController implements IGameController {</span>
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L40">    private static final Logger logger = LoggerFactory.getLogger(GameController.class);</span>
+    /**
+     * Contains relative coordinates of fission typed step.
+     */
+<span class="fc" id="L44">    private static final TCoordinate2D[] relativeCoordinatesOfFissionAttackZone = {</span>
+        /*C-1*/new TCoordinate2D(-1, 0), new TCoordinate2D(-1, +1),
+        /*C0*/ new TCoordinate2D(0, -1), new TCoordinate2D(0, 1),
+        /*C+1*/ new TCoordinate2D(1, -1), new TCoordinate2D(1, 0)
+    };
+
+    /**
+     * Contains relative coordinates of jump typed step.
+     */
+<span class="fc" id="L53">    private static final TCoordinate2D[] relativeCoordinatesOfJumpAttackZone = {</span>
+        /*C-2*/new TCoordinate2D(-2, 0), new TCoordinate2D(-2, 1), new TCoordinate2D(-2, 2),
+        /*C-1*/ new TCoordinate2D(-1, -1), new TCoordinate2D(-1, +2),
+        /*C0*/ new TCoordinate2D(0, -2), new TCoordinate2D(0, 2),
+        /*C+1*/ new TCoordinate2D(1, -2), new TCoordinate2D(1, 1),
+        /*C+2*/ new TCoordinate2D(2, -2), new TCoordinate2D(2, -1), new TCoordinate2D(2, 0)
+    };
+
+    /**
+     * Contains relative coordinates of adjacent cells.
+     */
+<span class="fc" id="L64">    private static final TCoordinate2D[] relativeCoordinatesOfAdjacentCells = {</span>
+        /*C-1*/new TCoordinate2D(-1, 0), new TCoordinate2D(-1, +1),
+        /*C0*/ new TCoordinate2D(0, -1), new TCoordinate2D(0, 1),
+        /*C+1*/ new TCoordinate2D(1, -1), new TCoordinate2D(1, 0)
+    };
+
+    /**
+     * Forces all play board visual components to display the end game dialog.
+     *
+     * @param caseCode    The case code of how was the game finished.
+     * @param winnerIndex The unique player index of winner player.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showEndGameDialogOnAllGameBoard(FinishCodeEnum caseCode, byte winnerIndex) throws TError {
+<span class="nc" id="L79">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L82">                ((IPlayBoard) view).showEndGameDialog(caseCode, winnerIndex);</span>
+            }
+<span class="nc" id="L84">        }</span>
+<span class="nc" id="L85">    }</span>
+
+    
+    
+    /**
+     * Forces all face board visual components to display the wait animation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void animateWaitOnFaceBoard() throws TError {
+<span class="nc" id="L95">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if(view instanceof IFaceBoard) {</span>
+<span class="nc" id="L98">                ((IFaceBoard) view).animateWait();</span>
+            }
+<span class="nc" id="L100">        }</span>
+<span class="nc" id="L101">    }</span>
+
+     /**
+     * Forces all face board visual components to display the thinking animation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void animateThinkingOnFaceBoard() throws TError {
+<span class="nc" id="L109">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if(view instanceof IFaceBoard) {</span>
+<span class="nc" id="L112">                ((IFaceBoard) view).animateThink();</span>
+            }
+<span class="nc" id="L114">        }</span>
+<span class="nc" id="L115">    }</span>
+
+    /**
+     * Forces all face board visual components to display themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showOnAllFaceBoard() throws TError {
+<span class="nc" id="L123">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">            if(view instanceof IFaceBoard) {</span>
+<span class="nc" id="L126">                ((IFaceBoard) view).show();</span>
+            }
+<span class="nc" id="L128">        }</span>
+<span class="nc" id="L129">    }</span>
+
+    /**
+     * Forces all info board visual components to refresh themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void refreshOnAllInfoBoard() throws TError {
+<span class="nc" id="L137">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">            if(view instanceof IInfoBoard) {</span>
+<span class="nc" id="L140">                ((IInfoBoard) view).refresh();</span>
+            }
+<span class="nc" id="L142">        }</span>
+<span class="nc" id="L143">    }</span>
+
+    /**
+     * Forces all info board visual components to display themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showOnAllInfoBoard() throws TError {
+<span class="nc" id="L151">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">            if(view instanceof IInfoBoard) {</span>
+<span class="nc" id="L154">                ((IInfoBoard) view).show();</span>
+            }
+<span class="nc" id="L156">        }</span>
+<span class="nc" id="L157">    }</span>
+
+    /**
+     * Forces all play board visual components to refresh themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void refreshOnAllPlayBoard() throws TError {
+<span class="nc" id="L165">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L168">                ((IPlayBoard) view).refresh();</span>
+            }
+<span class="nc" id="L170">        }</span>
+<span class="nc" id="L171">    }</span>
+
+    /**
+     * Forces all play board visual components to display themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showOnAllPlayBoard() throws TError {
+<span class="nc" id="L179">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L182">                ((IPlayBoard) view).show();</span>
+            }
+<span class="nc" id="L184">        }</span>
+<span class="nc" id="L185">    }</span>
+
+    /**
+     * Forces all play board visual components to remove possible attack zones animation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void removeAttackZoneOnAllGameBoard() throws TError {
+<span class="nc" id="L193">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L196">                ((IPlayBoard) view).removeAllAttackZone();</span>
+            }
+<span class="nc" id="L198">        }</span>
+<span class="nc" id="L199">    }</span>
+
+    /**
+     * Forces all play board visual components to display possible attack zones animation.
+     *
+     * @param columnIndex Column index of base cell of the attack zone. Index should valid and existing otherwise {@code TError} is thrown.
+     * @param rowIndex    Row index of base cell of the attack zone. Index should valid and existing otherwise {@code TError} is thrown.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showAttackZoneOnAllGameBoard(int columnIndex, int rowIndex) throws TError {
+<span class="nc" id="L210">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L213">                ((IPlayBoard) view).animateAsAttackZone(columnIndex, rowIndex);</span>
+            }
+<span class="nc" id="L215">        }</span>
+<span class="nc" id="L216">    }</span>
+
+    /**
+     * Forces all play board visual components to display animation when a not allowed player was clicked any of the added play boards.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     */
+    private void informNotAllowedPlayerClickedOnAPitOnAllGameBoard(int columnIndex, int rowIndex) {
+<span class="nc" id="L225">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L228">                ((IPlayBoard) view).animateWhenNotAllowedPlayerClickedOnAPit(columnIndex, rowIndex);</span>
+            }
+<span class="nc bnc" id="L230" title="All 2 branches missed.">            if(view instanceof IFaceBoard) {</span>
+<span class="nc" id="L231">                ((IFaceBoard) view).animateSurprise();</span>
+            }
+<span class="nc" id="L233">        }</span>
+<span class="nc" id="L234">    }</span>
+
+    /**
+     * Forces all play board visual components to display animation when a cell is occupied.
+     *
+     * @param columnIndex Column index of occupied cell. Index should valid and existing otherwise {@code TError} is thrown.
+     * @param rowIndex    Row index of occupied cell. Index should valid and existing otherwise {@code TError} is thrown.
+     * @param playerIndex Unique index of player by whom the cell is occupied.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showPitAsOccupiedByOnAllGameBoard(int columnIndex, int rowIndex, byte playerIndex) throws TError {
+<span class="nc" id="L246">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L249">                ((IPlayBoard) view).animatePitWhenCapturedByPlayer(columnIndex, rowIndex, playerIndex);</span>
+            }
+<span class="nc" id="L251">        }</span>
+<span class="nc" id="L252">    }</span>
+
+    /**
+     * Forces all play board visual components to display animation when a the player is clicked outside of attack zone.
+     *
+     * @param columnIndex Column index of clicked cell.
+     * @param rowIndex    Row index of clicked cell.
+     */
+    private void showTheAllowedPlayerClickedOutsideOnAllGameBoard(int columnIndex, int rowIndex) {
+<span class="nc" id="L261">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L263" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L264">                ((IPlayBoard) view).animateWhenClickedOutsideOfAttackZone(columnIndex, rowIndex);</span>
+            }
+<span class="nc" id="L266">        }</span>
+<span class="nc" id="L267">    }</span>
+
+    /**
+     * Forces all play board visual components to display animation when a cell is abandoned.
+     * Cell is abandoned after jump.
+     *
+     * @param columnIndex Column index of abandoned cell. Index should valid and existing otherwise {@code TError} is thrown.
+     * @param rowIndex    Row index of abandoned cell. Index should valid and existing otherwise {@code TError} is thrown.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showPitAsAbandonedAllGameBoard(int columnIndex, int rowIndex) throws TError {
+<span class="nc" id="L279">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L282">                ((IPlayBoard) view).animatePitWhenAbandon(columnIndex, rowIndex);</span>
+            }
+<span class="nc" id="L284">        }</span>
+<span class="nc" id="L285">    }</span>
+
+    /**
+     * Forces all play board visual components to display animation when neighbour cells are captured/assimilated.
+     *
+     * @param columnIndex Column index of assimilated cell.
+     * @param rowIndex    Row index of assimilated cell.
+     * @param playerIndex Player index of player to who the cell is assimilated.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showPitAsCapturedInLocalAreaOnAllGameBoard(int columnIndex, int rowIndex, byte playerIndex) throws TError {
+<span class="nc" id="L297">        ArrayList&lt;IView&gt; list = this.getViewList();</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">        for(IView view : list) {</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">            if(view instanceof IPlayBoard) {</span>
+<span class="nc" id="L300">                ((IPlayBoard) view).animatePitWhenCapturedInLocalArea(columnIndex, rowIndex, playerIndex);</span>
+            }
+<span class="nc" id="L302">        }</span>
+<span class="nc" id="L303">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void cellClicked(int clickedColumnIndex, int clickedRowIndex) throws TError {
+
+        // Input checkings
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        if(!this.getGameData().isCellExists(clickedColumnIndex, clickedRowIndex)) {</span>
+<span class="nc" id="L313">            throw new TError(&quot;The requested coordinate[&quot; + clickedColumnIndex + &quot;,&quot; + clickedRowIndex + &quot;] is out of range!&quot;);</span>
+        }
+
+        //byte    clickedStandValue = this.getGameData().getCell(columnIndex, rowIndex);
+        //
+        //IField clickedField = this.getGameData().getCellAsField(columnIndex, rowIndex);
+<span class="nc" id="L319">        IField previousClickedField = this.getGameData().getPreviousClickedField();</span>
+<span class="nc" id="L320">        byte humanPlayerIndex = this.getGameData().getAllowedPlayerIndex();</span>
+
+        // Value checkings
+        //if(clickedField == null) {
+        //   throw new TError(&quot;Null value was found!&quot;);
+        // }
+        //
+<span class="nc bnc" id="L327" title="All 2 branches missed.">        if(this.getGameData().isCellOccupied(clickedColumnIndex, clickedRowIndex)) {                              // When the cell is not empty in other words when it is occupied </span>
+<span class="nc" id="L328">            this.chooseAttackerCell(clickedColumnIndex, clickedRowIndex, humanPlayerIndex);               // Select which piece will be used for attack/for occupie another cell</span>
+        }
+<span class="nc bnc" id="L330" title="All 4 branches missed.">        else if(!this.getGameData().isCellOccupied(clickedColumnIndex, clickedRowIndex) &amp;&amp; !this.getGameData().isCellInactive(clickedColumnIndex, clickedRowIndex)) { // When the clicked cell is not occupied jet</span>
+
+            //
+<span class="nc" id="L333">            int fromColumnIndex = -1;</span>
+<span class="nc" id="L334">            int fromRowIndex = -1;</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">            if(previousClickedField != null) {</span>
+<span class="nc" id="L336">                fromColumnIndex = previousClickedField.getColumnIndex();</span>
+<span class="nc" id="L337">                fromRowIndex = previousClickedField.getRowIndex();</span>
+            }
+
+            //
+<span class="nc" id="L341">            int targetColumnIndex = clickedColumnIndex;</span>
+<span class="nc" id="L342">            int targetRowIndex = clickedRowIndex;</span>
+
+            //
+<span class="nc bnc" id="L345" title="All 4 branches missed.">            if((fromColumnIndex &gt;= 0) &amp;&amp; (fromRowIndex &gt;= 0)) { //Note: Akkor, ha van kiválasztva támadó cella</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">                if(this.tryToCaptureTheTarget(fromColumnIndex, fromRowIndex, targetColumnIndex, targetRowIndex, humanPlayerIndex)) {</span>
+<span class="nc" id="L347">                    this.nextRound();</span>
+                }
+            }
+        }
+
+<span class="nc" id="L352">    }</span>
+
+    /**
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public final void autoPlayerCellStep(int fromColumnIndex, int fromRowIndex, int targetColumnIndex, int targetRowIndex, byte playerIndex) throws TError {
+<span class="nc" id="L360">        logger.debug(&quot;autoPlayerCellStep&quot;);</span>
+<span class="nc" id="L361">        boolean isSucces = this.tryToCaptureTheTarget(fromColumnIndex, fromRowIndex, targetColumnIndex, targetRowIndex, playerIndex);</span>
+
+<span class="nc bnc" id="L363" title="All 2 branches missed.">        if(isSucces) {</span>
+<span class="nc" id="L364">            logger.debug(&quot;Succes&quot;);</span>
+<span class="nc" id="L365">            this.nextRound();</span>
+
+        }
+        else {
+<span class="nc" id="L369">            logger.debug(&quot;Not Succes&quot;);</span>
+        }
+
+<span class="nc" id="L372">    }</span>
+
+    /**
+     * Entitles a cell to be base cell of the following attack.
+     *
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     * @param playerIndex The unique index of player clicked on cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void chooseAttackerCell(int columnIndex, int rowIndex, byte playerIndex) throws TError {
+
+        // Input checking
+<span class="nc bnc" id="L386" title="All 2 branches missed.">        if(!this.getGameData().isCellExists(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L387">            throw new TError(&quot;Requested coordinate[&quot; + columnIndex + &quot;,&quot; + rowIndex + &quot;] is out of range!&quot;);</span>
+        }
+
+        try {
+
+<span class="nc" id="L392">            IField clickedField = this.getGameData().getCellAsField(columnIndex, rowIndex);</span>
+<span class="nc" id="L393">            IField previousClickedField = this.getGameData().getPreviousClickedField();</span>
+
+<span class="nc" id="L395">            int previousClickedColumnIndex = -1;        // It is out of coordinate range</span>
+<span class="nc" id="L396">            int previousClickedRowIndex = -1;           // It is out of coordinate range</span>
+<span class="nc" id="L397">            int actualPlayerIndex = this.getGameData().getAllowedPlayerIndex();</span>
+
+<span class="nc bnc" id="L399" title="All 2 branches missed.">            if(previousClickedField != null) {</span>
+<span class="nc" id="L400">                previousClickedColumnIndex = previousClickedField.getColumnIndex();</span>
+<span class="nc" id="L401">                previousClickedRowIndex = previousClickedField.getRowIndex();</span>
+            }
+
+<span class="nc bnc" id="L404" title="All 2 branches missed.">            if(clickedField == null) {</span>
+<span class="nc" id="L405">                throw new TError(&quot;Unexpected null value was found!&quot;);</span>
+            }
+
+            // If inactive cell was selected
+<span class="nc bnc" id="L409" title="All 2 branches missed.">            if(clickedField.isInactive()) {</span>
+<span class="nc" id="L410">                throw new TFailed();</span>
+            }
+
+            // The player not allowed to do the step
+<span class="nc bnc" id="L414" title="All 2 branches missed.">            if(actualPlayerIndex != playerIndex) {</span>
+<span class="nc" id="L415">                throw new TFailed();</span>
+            }
+            // The selected player is not a natural player
+<span class="nc bnc" id="L418" title="All 2 branches missed.">            if(this.getGameData().getPlayer(playerIndex).isAutoPlayer()) {</span>
+<span class="nc" id="L419">                throw new TFailed();</span>
+                //TheLogger.trace(&quot;A lépni szándékozó játékos nem természetes játékos!&quot;);
+            }
+            //
+<span class="nc bnc" id="L423" title="All 2 branches missed.">            if(clickedField.getPlayerIndex() != playerIndex) {</span>
+<span class="nc" id="L424">                throw new TFailed();</span>
+                //TheLogger.trace(&quot;A cella más játékost tartalmaz(&quot; + ClickedField.getPlayerIndex() + &quot;) mint: &quot; + PlayerIndex);
+            }
+
+            // There is no unoccupied cell around
+<span class="nc bnc" id="L429" title="All 2 branches missed.">            if(!this.isCellNotBlocked(columnIndex, rowIndex, playerIndex)) {</span>
+<span class="nc" id="L430">                throw new TFailed();</span>
+                //TheLogger.trace(&quot;A cellából nem tud elmenni&quot;);
+            }
+
+            // When the actual click is happened on the same cell on which the previous happened. In this case the spread area will be deactivated
+<span class="nc bnc" id="L435" title="All 4 branches missed.">            if((clickedField.getColumnIndex() == previousClickedColumnIndex) &amp;&amp; (clickedField.getRowIndex() == previousClickedRowIndex)) {</span>
+
+<span class="nc" id="L437">                this.removeAttackZoneOnAllGameBoard();</span>
+<span class="nc" id="L438">                this.getGameData().removeLastClickedField();</span>
+            }
+            else { // When the targeted/clicked actual and previous cell is not the same. In this case the the spread area should be reallocated 
+<span class="nc" id="L441">                this.showAttackZoneOnAllGameBoard(columnIndex, rowIndex);</span>
+<span class="nc" id="L442">                this.getGameData().setPreviousClickedField(clickedField);</span>
+            }
+
+        }
+<span class="nc" id="L446">        catch(TFailed exp) {</span>
+<span class="nc" id="L447">            this.informNotAllowedPlayerClickedOnAPitOnAllGameBoard(columnIndex, rowIndex);</span>
+<span class="nc" id="L448">        }</span>
+<span class="nc" id="L449">    }</span>
+
+    /**
+     * Tries to capture the target cell and its area from the base cell.
+     *
+     * @param baseColumnIndex     The column index of the source cell.
+     * @param baseRowIndex        The row index of the source cell.
+     * @param targetColumnIndex   The column index of the target cell.
+     * @param targetRowIndex      The row index of the target cell.
+     * @param attackerPlayerIndex Unique index of player attacking.
+     *
+     * @return True if the attempt of capture was successful otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean tryToCaptureTheTarget(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex, byte attackerPlayerIndex) throws TError {
+
+        try {
+
+            // The source cell does not exists
+<span class="nc bnc" id="L469" title="All 2 branches missed.">            if(!this.getGameData().isCellExists(baseColumnIndex, baseRowIndex)) {</span>
+<span class="nc" id="L470">                throw new TError(&quot;Source cell is not exists!&quot;);</span>
+            }
+
+            // The target cell does not exists
+<span class="nc bnc" id="L474" title="All 2 branches missed.">            if(!this.getGameData().isCellExists(targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L475">                throw new TError(&quot;Destination cell is not exists!&quot;);</span>
+            }
+
+            // It tried to attack from inactive cell
+<span class="nc bnc" id="L479" title="All 2 branches missed.">            if(this.getGameData().isCellInactive(baseColumnIndex, baseRowIndex)) {</span>
+<span class="nc" id="L480">                logger.debug(&quot;E03&quot;);</span>
+<span class="nc" id="L481">                throw new TFailed();</span>
+            }
+
+            // It tried to attack against inactive cell
+<span class="nc bnc" id="L485" title="All 2 branches missed.">            if(this.getGameData().isCellInactive(targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L486">                logger.debug(&quot;E04&quot;);</span>
+<span class="nc" id="L487">                throw new TFailed();</span>
+            }
+
+            // The targeted cell is not empty but occupied
+<span class="nc bnc" id="L491" title="All 2 branches missed.">            if(this.getGameData().isCellOccupied(targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L492">                logger.debug(&quot;E05&quot;);</span>
+<span class="nc" id="L493">                throw new TFailed();</span>
+            }
+
+            // The source cell is occupied by anotehr palyer
+<span class="nc bnc" id="L497" title="All 2 branches missed.">            if(this.getGameData().getCell(baseColumnIndex, baseRowIndex) != attackerPlayerIndex) {</span>
+<span class="nc" id="L498">                logger.debug(&quot;E06&quot;);</span>
+<span class="nc" id="L499">                throw new TFailed();</span>
+            }
+
+            // If it is out of the legal attack range
+<span class="nc bnc" id="L503" title="All 2 branches missed.">            if(!isInTheAttackRange(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L504">                logger.debug(&quot;E07&quot;);</span>
+<span class="nc" id="L505">                throw new TFailed();</span>
+            }
+
+<span class="nc bnc" id="L508" title="All 2 branches missed.">            if(this.isInTheFissionZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area01</span>
+
+<span class="nc" id="L510">                this.getGameData().setCellOccupiedByPlayer(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+<span class="nc" id="L511">                this.showPitAsOccupiedByOnAllGameBoard(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+
+                // Occupie the neighbourhood
+<span class="nc" id="L514">                this.occupieAdjacentCells(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+
+                //
+<span class="nc" id="L517">                this.removeAttackZoneOnAllGameBoard();</span>
+<span class="nc" id="L518">                this.getGameData().removeLastClickedField();</span>
+
+            }
+<span class="nc bnc" id="L521" title="All 2 branches missed.">            else if(this.isInTheJumpZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area02</span>
+
+<span class="nc" id="L523">                this.getGameData().setCellOccupiedByPlayer(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+<span class="nc" id="L524">                this.showPitAsOccupiedByOnAllGameBoard(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+
+                // Release the source cell because it is a jump
+<span class="nc" id="L527">                this.giveUpCell(baseColumnIndex, baseRowIndex);</span>
+
+                // Occupie the neighbourhood
+<span class="nc" id="L530">                this.occupieAdjacentCells(targetColumnIndex, targetRowIndex, attackerPlayerIndex);</span>
+
+                //
+<span class="nc" id="L533">                this.removeAttackZoneOnAllGameBoard();</span>
+<span class="nc" id="L534">                this.getGameData().removeLastClickedField();</span>
+            }
+
+        }
+<span class="nc" id="L538">        catch(TFailed exp) {</span>
+<span class="nc" id="L539">            this.showTheAllowedPlayerClickedOutsideOnAllGameBoard(targetColumnIndex, targetRowIndex);</span>
+<span class="nc" id="L540">            return false;</span>
+<span class="nc" id="L541">        }</span>
+
+<span class="nc" id="L543">        return true;</span>
+    }
+
+    /**
+     * Makes a cell unoccupied.
+     *
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void giveUpCell(int columnIndex, int rowIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L556" title="All 2 branches missed.">        if(!this.getGameData().isCellExists(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L557">            throw new TError(&quot;The given coordinate[targetColumnIndex, targetRowIndex] is out of range!&quot;);</span>
+        }
+
+        // Store value
+<span class="nc" id="L561">        this.getGameData().setCellLiberated(columnIndex, rowIndex);</span>
+
+        // Force view component 
+<span class="nc" id="L564">        this.showPitAsAbandonedAllGameBoard(columnIndex, rowIndex);</span>
+
+<span class="nc" id="L566">    }</span>
+
+    /**
+     * Occupies all neighbour cells of base cell.
+     *
+     * @param baseColumnIndex    The column index of base cell.
+     * @param baseRowIndex       The row index of base cell.
+     * @param atackerPlayerIndex The player index of the occupier.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void occupieAdjacentCells(int baseColumnIndex, int baseRowIndex, byte atackerPlayerIndex) throws TError {
+
+<span class="nc bnc" id="L579" title="All 2 branches missed.">        for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfAdjacentCells) {</span>
+<span class="nc" id="L580">            int adjacentColumnIndex = baseColumnIndex + relativeCoordinate.getX();</span>
+<span class="nc" id="L581">            int adjacentRowIndex = baseRowIndex + relativeCoordinate.getY();</span>
+
+<span class="nc bnc" id="L583" title="All 2 branches missed.">            if(this.getGameData().isCellExists(adjacentColumnIndex, adjacentRowIndex)) {</span>
+<span class="nc bnc" id="L584" title="All 2 branches missed.">                if(this.getGameData().isCellOccupied(adjacentColumnIndex, adjacentRowIndex)) {</span>
+<span class="nc" id="L585">                    this.getGameData().setCellOccupiedByPlayer(adjacentColumnIndex, adjacentRowIndex, atackerPlayerIndex);</span>
+                }
+            }
+        }
+<span class="nc" id="L589">    }</span>
+
+    /**
+     * It makes all empty cell captured by the specified player.
+     *
+     * @param playerIndex Unique index of specified player.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void captureAllEmptyCellByThePlayer(byte playerIndex) throws TError {
+
+        // Input checkings
+<span class="nc bnc" id="L601" title="All 2 branches missed.">        if(!this.getGameData().isPlayerExists(playerIndex)) {</span>
+<span class="nc" id="L602">            throw new TError(&quot;No player waas found at index &quot; + playerIndex + &quot;!&quot;);</span>
+        }
+
+<span class="nc" id="L605">        byte[][] stands = this.getGameData().getCells();</span>
+
+<span class="nc bnc" id="L607" title="All 2 branches missed.">        for(int columnIndex = 0; columnIndex &lt; stands.length; columnIndex++) {</span>
+<span class="nc bnc" id="L608" title="All 2 branches missed.">            for(int rowIndex = 0; rowIndex &lt; stands[columnIndex].length; rowIndex++) {</span>
+
+<span class="nc bnc" id="L610" title="All 2 branches missed.">                if(stands[columnIndex][rowIndex] == 0) {</span>
+<span class="nc" id="L611">                    stands[columnIndex][rowIndex] = playerIndex;  //???????</span>
+<span class="nc" id="L612">                    this.showPitAsCapturedInLocalAreaOnAllGameBoard(columnIndex, rowIndex, playerIndex);</span>
+                }
+
+            }
+        }
+
+        //
+        //this.refreshOnAllGameInfo();
+<span class="nc" id="L620">        this.refreshOnAllPlayBoard();</span>
+
+<span class="nc" id="L622">    }</span>
+
+    /**
+     * Tells whether the targeted cell is in the attack range counted from the base cell.
+     *
+     * @param baseColumnIndex   The column index of the base cell.
+     * @param baseRowIndex      The row index of the base cell.
+     * @param targetColumnIndex The column index of the target cell.
+     * @param targetRowIndex    The row index of the target cell.
+     *
+     * @return True if the target cell is in the attack range, false otherwise.
+     */
+    private boolean isInTheAttackRange(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+
+<span class="nc bnc" id="L636" title="All 2 branches missed.">        if(this.isInTheFissionZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L637">            return true;</span>
+        }
+<span class="nc bnc" id="L639" title="All 2 branches missed.">        if(this.isInTheJumpZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L640">            return true;</span>
+        }
+
+<span class="nc" id="L643">        return false;</span>
+    }
+
+    /**
+     * Tells whether the target cell is in the fission zone.
+     *
+     * @param baseColumnIndex   The column index of the source cell.
+     * @param baseRowIndex      The row index of the source cell.
+     * @param targetColumnIndex The column index of the target cell.
+     * @param targetRowIndex    The row index of the target cell.
+     *
+     * @return True if the target cell is in the fission zone otherwise false.
+     */
+    private boolean isInTheFissionZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+
+<span class="nc bnc" id="L658" title="All 2 branches missed.">        for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfFissionAttackZone) {</span>
+<span class="nc" id="L659">            int attackColumnIndex = baseColumnIndex + relativeCoordinate.getX();</span>
+<span class="nc" id="L660">            int attackRowIndex = baseRowIndex + relativeCoordinate.getY();</span>
+<span class="nc bnc" id="L661" title="All 4 branches missed.">            if(attackColumnIndex == targetColumnIndex &amp;&amp; attackRowIndex == targetRowIndex) {</span>
+<span class="nc" id="L662">                return true;</span>
+            }
+        }
+<span class="nc" id="L665">        return false;</span>
+    }
+
+    /**
+     * Tells whether the target cell is in the jump zone.
+     *
+     * @param baseColumnIndex   The column index of the source cell.
+     * @param baseRowIndex      The row index of the source cell.
+     * @param targetColumnIndex The column index of the source cell.
+     * @param targetRowIndex    The row index of the source cell.
+     *
+     * @return True if the target cell is in the jump zone otherwise false.
+     */
+    private boolean isInTheJumpZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+
+<span class="nc bnc" id="L680" title="All 2 branches missed.">        for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfJumpAttackZone) {</span>
+<span class="nc" id="L681">            int attackColumnIndex = baseColumnIndex + relativeCoordinate.getX();</span>
+<span class="nc" id="L682">            int attackRowIndex = baseRowIndex + relativeCoordinate.getY();</span>
+<span class="nc bnc" id="L683" title="All 4 branches missed.">            if(attackColumnIndex == targetColumnIndex &amp;&amp; attackRowIndex == targetRowIndex) {</span>
+<span class="nc" id="L684">                return true;</span>
+            }
+        }
+<span class="nc" id="L687">        return false;</span>
+
+    }
+
+    private Task&lt;IOperator&gt; getStepTask(byte[][] board, IAIPlayer player, byte playerIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L693" title="All 2 branches missed.">        if(board == null) {</span>
+<span class="nc" id="L694">            throw new TError(&quot;Parameter \&quot;board\&quot; must not be null!&quot;);</span>
+        }
+<span class="nc bnc" id="L696" title="All 2 branches missed.">        if(player == null) {</span>
+<span class="nc" id="L697">            throw new TError(&quot;Parameter \&quot;player\&quot; must not be null!&quot;);</span>
+        }
+
+<span class="nc" id="L700">        final GameController me = this;</span>
+<span class="nc" id="L701">        Task&lt;IOperator&gt; stepTask = new Task&lt;IOperator&gt;() {</span>
+            @Override
+            protected IOperator call() throws TError, Exception {
+
+<span class="nc" id="L705">                me.animateThinkingOnFaceBoard();</span>
+
+<span class="nc" id="L707">                long beginTime = Calendar.getInstance().getTime().getTime();</span>
+<span class="nc" id="L708">                long borderTime = beginTime + (2000);</span>
+
+                // Determine next step
+<span class="nc" id="L711">                IOperator opr = player.takeYourStep(board);</span>
+
+                // Wait until minimum waiting time is over
+                do {
+<span class="nc bnc" id="L715" title="All 2 branches missed.">                    if(Calendar.getInstance().getTime().getTime() &lt;= borderTime) {</span>
+<span class="nc" id="L716">                        Thread.sleep(200);</span>
+                    }
+                    else {
+                        break;
+                    }
+                }
+                while(1 == 1);
+
+<span class="nc bnc" id="L724" title="All 2 branches missed.">                if(opr != null) {</span>
+<span class="nc bnc" id="L725" title="All 2 branches missed.">                    if(me.isGameRunning()) {</span>
+<span class="nc" id="L726">                        me.showAttackZoneOnAllGameBoard(opr.getBaseColumnIndex(), opr.getBaseRowIndex());</span>
+                    }
+
+<span class="nc" id="L729">                    Thread.sleep(800);</span>
+
+<span class="nc bnc" id="L731" title="All 2 branches missed.">                    if(me.isGameRunning()) {</span>
+<span class="nc" id="L732">                        me.removeAttackZoneOnAllGameBoard();</span>
+                    }
+                }
+
+<span class="nc" id="L736">                return opr;</span>
+            }
+        };
+
+<span class="nc" id="L740">        stepTask.setOnSucceeded(new EventHandler&lt;WorkerStateEvent&gt;() {</span>
+            @Override
+            public void handle(WorkerStateEvent Event) {
+
+                try {
+
+<span class="nc" id="L746">                    IOperator opr = (IOperator) Event.getSource().getValue();</span>
+
+<span class="nc bnc" id="L748" title="All 2 branches missed.">                    if(opr != null) {</span>
+
+<span class="nc" id="L750">                        me.animateWaitOnFaceBoard();</span>
+
+<span class="nc bnc" id="L752" title="All 2 branches missed.">                        if(me.isGameRunning()) {</span>
+
+<span class="nc" id="L754">                            me.autoPlayerCellStep(opr.getBaseColumnIndex(), opr.getBaseRowIndex(), opr.getTargetColumnIndex(), opr.getTargetRowIndex(), playerIndex);</span>
+                        }
+                    }
+
+                }
+<span class="nc" id="L759">                catch(TError ex) {</span>
+<span class="nc" id="L760">                    logger.error(ex.toString());</span>
+                }
+<span class="nc" id="L762">                catch(Exception ex) {</span>
+<span class="nc" id="L763">                    logger.error(ex.toString());</span>
+<span class="nc" id="L764">                }</span>
+
+<span class="nc" id="L766">            }</span>
+        });
+
+<span class="nc" id="L769">        return stepTask;</span>
+    }
+
+    /**
+     * Pushes the game into the next stage.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void nextRound() throws TError {
+<span class="nc" id="L778">        boolean isFinish = false;</span>
+<span class="nc" id="L779">        byte previousPlayerIndex = this.getGameData().getAllowedPlayerIndex();</span>
+
+        // Animation
+        //this.refreshOnAllGameInfo();
+        // Calculate the effect of the last step
+<span class="nc" id="L784">        this.calculateStepEffect();</span>
+<span class="nc" id="L785">        this.determineGamePlayStatus(previousPlayerIndex);</span>
+
+        //
+<span class="nc" id="L788">        byte lastPlayerIndex = previousPlayerIndex;</span>
+<span class="nc" id="L789">        FinishCodeEnum caseCode = null;</span>
+<span class="nc" id="L790">        StatusCode currentStatus = this.getGameData().getStatus();</span>
+
+<span class="nc bnc" id="L792" title="All 2 branches missed.">        if(currentStatus == StatusCode.BoardFullFinish) {</span>
+<span class="nc" id="L793">            isFinish = true;</span>
+<span class="nc" id="L794">            caseCode = IPlayBoard.FinishCodeEnum.BoardFull;</span>
+        }
+<span class="nc bnc" id="L796" title="All 2 branches missed.">        else if(currentStatus == StatusCode.EnemyFallFinish) {</span>
+<span class="nc" id="L797">            isFinish = true;</span>
+<span class="nc" id="L798">            caseCode = IPlayBoard.FinishCodeEnum.EnemyFall;</span>
+
+<span class="nc" id="L800">            this.captureAllEmptyCellByThePlayer(lastPlayerIndex);</span>
+        }
+<span class="nc bnc" id="L802" title="All 2 branches missed.">        else if(currentStatus == StatusCode.EnemyBlockedFinish) {</span>
+<span class="nc" id="L803">            isFinish = true;</span>
+<span class="nc" id="L804">            caseCode = IPlayBoard.FinishCodeEnum.EnemyBlocked;</span>
+
+<span class="nc" id="L806">            this.captureAllEmptyCellByThePlayer(lastPlayerIndex);</span>
+        }
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L811" title="All 2 branches missed.">        if(isFinish) {//Note: Ha a játék végetért</span>
+<span class="nc" id="L812">            logger.debug(&quot;FINISH&quot;);</span>
+<span class="nc" id="L813">            byte winnerIndex = this.determineTheWinnerIndex();</span>
+<span class="nc" id="L814">            this.getGameData().setIsGameFinished(true);</span>
+<span class="nc" id="L815">            this.getGameData().setGameProcessStatus(ProcessStatusCode.STOPPED);</span>
+<span class="nc" id="L816">            this.showEndGameDialogOnAllGameBoard(caseCode, winnerIndex);</span>
+<span class="nc" id="L817">        }</span>
+        else {
+<span class="nc" id="L819">            byte nextPlayerIndex = this.getNextAllowedPlayerIndex(previousPlayerIndex);</span>
+
+            // A tábla csak a céljátékos számára való engedélyezése
+<span class="nc" id="L822">            this.getGameData().setAllowedPlayerIndex(nextPlayerIndex);</span>
+
+            //
+            //this.refreshOnAllGameInfo();
+            // Check wether if the palyer is artificial and invoke it
+<span class="nc" id="L827">            final IPlayer player = this.getGameData().getPlayer(nextPlayerIndex);</span>
+
+<span class="nc bnc" id="L829" title="All 2 branches missed.">            if(player.isAutoPlayer()) {</span>
+
+<span class="nc" id="L831">                logger.debug(&quot;AutoPlayer&quot;);</span>
+<span class="nc" id="L832">                byte[][] board = this.getGameData().getCells();</span>
+<span class="nc" id="L833">                IAIPlayer artificialPlayer = (IAIPlayer) player;</span>
+
+<span class="nc" id="L835">                Task&lt;IOperator&gt; task = this.getStepTask(board, artificialPlayer, nextPlayerIndex);</span>
+<span class="nc" id="L836">                new Thread(task).start();</span>
+            }
+        }
+<span class="nc" id="L839">    }</span>
+
+    /**
+     * Calculates the winner player and retrieves its unique index.
+     *
+     * @return The unique index of the winner player.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private byte determineTheWinnerIndex() throws TError {
+<span class="nc" id="L849">        byte winnerIndex = 0;</span>
+<span class="nc" id="L850">        byte player01 = 1;</span>
+<span class="nc" id="L851">        byte player02 = 2;</span>
+
+        //---Note:
+<span class="nc" id="L854">        int player01BallCount = this.getGameData().getPlayerBallCount(player01);</span>
+<span class="nc" id="L855">        int player02BallCount = this.getGameData().getPlayerBallCount(player02);</span>
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L859" title="All 2 branches missed.">        if(player01BallCount &gt; player02BallCount) {</span>
+<span class="nc" id="L860">            winnerIndex = player01;</span>
+        }
+<span class="nc bnc" id="L862" title="All 2 branches missed.">        else if(player01BallCount &lt; player02BallCount) {</span>
+<span class="nc" id="L863">            winnerIndex = player02;</span>
+        }
+        //---    
+
+<span class="nc" id="L867">        return winnerIndex;</span>
+    }
+
+    /**
+     * Calculates the game status after the last step done by the specified player.
+     *
+     * @param lastPlayerIndex The unique index of the specified player.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void determineGamePlayStatus(byte lastPlayerIndex) throws TError {
+        //
+<span class="nc" id="L879">        StatusCode newStatus = StatusCode.NotFinished;</span>
+
+        //
+<span class="nc bnc" id="L882" title="All 2 branches missed.">        if(this.getGameData().isBoardFull()) {//Note: Ha a táblán már nics több szabad hely.</span>
+<span class="nc" id="L883">            logger.debug(&quot;Determine&gt;&gt;&gt;&gt;&gt;&gt;001&quot;);</span>
+<span class="nc" id="L884">            newStatus = StatusCode.BoardFullFinish;</span>
+        }
+<span class="nc bnc" id="L886" title="All 2 branches missed.">        else if((this.getGameData().playerCount() - 1) == this.getGameData().defeatedPlayerCount()) {//Note: Ha már csak 1db játékos maradt</span>
+<span class="nc" id="L887">            logger.debug(&quot;Determine&gt;&gt;&gt;&gt;&gt;&gt;002&quot;);</span>
+<span class="nc" id="L888">            newStatus = StatusCode.EnemyFallFinish;</span>
+        }
+<span class="nc bnc" id="L890" title="All 2 branches missed.">        else if(this.isAllEnemyOfThisPlayerBlocked(lastPlayerIndex)) {//Note: Ha a legutóljára lépett játékos lépésének a hatására minden ellenfél blokkolva van.</span>
+
+<span class="nc" id="L892">            logger.debug(&quot;Determine[&quot; + lastPlayerIndex + &quot;]&gt;&gt;&gt;&gt;&gt;&gt;003&quot;);</span>
+<span class="nc" id="L893">            newStatus = StatusCode.EnemyBlockedFinish;</span>
+        }
+
+<span class="nc" id="L896">        this.getGameData().setGamePlayStatus(newStatus);</span>
+
+<span class="nc" id="L898">    }</span>
+
+    /**
+     * Calculates the effect of last step.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void calculateStepEffect() throws TError {
+
+        // Check whether a player lost its last ball
+<span class="nc bnc" id="L908" title="All 2 branches missed.">        for(IPlayer player : this.getGameData().getPlayerList()) {</span>
+
+<span class="nc bnc" id="L910" title="All 2 branches missed.">            if(player != null) {</span>
+
+<span class="nc" id="L912">                byte playerIndex = (byte) (this.getGameData().getPlayerList().indexOf(player) + 1);</span>
+
+<span class="nc bnc" id="L914" title="All 2 branches missed.">                if(!this.getGameData().isPlayerDefeated(playerIndex)) {</span>
+
+<span class="nc" id="L916">                    int ballCount = this.getGameData().getPlayerBallCount(playerIndex);</span>
+
+<span class="nc bnc" id="L918" title="All 2 branches missed.">                    if(ballCount == 0) {//Note: A játékos labdái elfogytak ezért kiesik</span>
+
+<span class="nc" id="L920">                        this.getGameData().setPlayerAsDefeated(playerIndex);</span>
+                    }
+                }
+            }
+<span class="nc" id="L924">        }</span>
+
+<span class="nc" id="L926">    }</span>
+
+    /**
+     * Retrieves the player index of player entitled in the next round.
+     *
+     * @param previousPlayerIndex The unique index of previous player entitled in last round.
+     *
+     * @return A unique index.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private byte getNextAllowedPlayerIndex(byte previousPlayerIndex) throws TError {
+<span class="nc" id="L938">        byte lastAttemptedIndex = previousPlayerIndex;</span>
+        byte nextPlayerIndex;
+
+        do {
+
+<span class="nc bnc" id="L943" title="All 2 branches missed.">            if((lastAttemptedIndex + 1) &lt; this.getGameData().getPlayerList().size()) {</span>
+<span class="nc" id="L944">                nextPlayerIndex = (byte) (lastAttemptedIndex + 1);</span>
+            }
+            else {
+<span class="nc" id="L947">                nextPlayerIndex = IGamePlay.minimumExpectedPlayerIndex;</span>
+            }
+
+            // If player does not exists
+<span class="nc bnc" id="L951" title="All 2 branches missed.">            if(!this.getGameData().isPlayerExists(nextPlayerIndex)) {</span>
+<span class="nc" id="L952">                lastAttemptedIndex = nextPlayerIndex;</span>
+<span class="nc" id="L953">                continue;</span>
+            }
+
+            //
+<span class="nc bnc" id="L957" title="All 2 branches missed.">            if(this.getGameData().isPlayerDefeated(nextPlayerIndex)) {</span>
+<span class="nc" id="L958">                lastAttemptedIndex = nextPlayerIndex;</span>
+<span class="nc" id="L959">                continue;</span>
+            }
+
+<span class="nc bnc" id="L962" title="All 2 branches missed.">            if(!this.IsAnyNotBlockedCell(nextPlayerIndex)) {</span>
+<span class="nc" id="L963">                lastAttemptedIndex = nextPlayerIndex;</span>
+<span class="nc" id="L964">                continue;</span>
+            }
+
+<span class="nc" id="L967">            return nextPlayerIndex;</span>
+        }
+        while(1 == 1);
+    }
+
+    /**
+     * Tells whether the opponents of the specified player are blocked.
+     *
+     * @param playerIndex Unique index of specified player.
+     *
+     * @return True if all opponents of the player are blocked otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean isAllEnemyOfThisPlayerBlocked(byte playerIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L983" title="All 2 branches missed.">        if(!this.getGameData().isPlayerExists(playerIndex)) {</span>
+<span class="nc" id="L984">            throw new TError(&quot;No player exists at playerindex '&quot; + playerIndex + &quot;' &quot;);</span>
+        }
+
+        //
+<span class="nc bnc" id="L988" title="All 2 branches missed.">        for(IPlayer player : this.getGameData().getPlayerList()) {</span>
+<span class="nc bnc" id="L989" title="All 2 branches missed.">            if(player != null) {</span>
+
+<span class="nc" id="L991">                byte enemyPlayerIndex = (byte) (this.getGameData().getPlayerList().indexOf(player) + 1);</span>
+
+<span class="nc bnc" id="L993" title="All 4 branches missed.">                if(!this.getGameData().isPlayerDefeated(enemyPlayerIndex) &amp;&amp; (enemyPlayerIndex != playerIndex)) {</span>
+<span class="nc" id="L994">                    logger.debug(&quot;Ball[&quot; + playerIndex + &quot;]: compared to &quot; + enemyPlayerIndex);</span>
+<span class="nc bnc" id="L995" title="All 2 branches missed.">                    if(this.IsAnyNotBlockedCell(enemyPlayerIndex)) { //---Note: Ennek a játékosnak még van lépési lehetősége</span>
+<span class="nc" id="L996">                        return false;</span>
+                    }
+                }
+
+            }
+<span class="nc" id="L1001">        }</span>
+
+<span class="nc" id="L1003">        return true;</span>
+    }
+
+    /**
+     * Tells whether the specified player has any not blocked cell.
+     *
+     * @param playerIndex Unique index of specified player.
+     *
+     * @return True if the player has any not blocked cell otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean IsAnyNotBlockedCell(byte playerIndex) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L1017" title="All 2 branches missed.">        if(!this.getGameData().isPlayerExists(playerIndex)) {</span>
+<span class="nc" id="L1018">            throw new TError(&quot;No player waas found at index &quot; + playerIndex + &quot;!&quot;);</span>
+        }
+
+<span class="nc" id="L1021">        byte[][] stands = this.getGameData().getCells();</span>
+
+<span class="nc bnc" id="L1023" title="All 2 branches missed.">        for(int columnIndex = 0; columnIndex &lt; stands.length; columnIndex++) {</span>
+<span class="nc bnc" id="L1024" title="All 2 branches missed.">            for(int rowIndex = 0; rowIndex &lt; stands[columnIndex].length; rowIndex++) {</span>
+
+<span class="nc bnc" id="L1026" title="All 2 branches missed.">                if(stands[columnIndex][rowIndex] == playerIndex) {</span>
+
+                    // Check app steps available of the cell
+<span class="nc bnc" id="L1029" title="All 2 branches missed.">                    if(this.isCellNotBlocked(columnIndex, rowIndex, playerIndex)) {</span>
+<span class="nc" id="L1030">                        return true;</span>
+                    }
+                    //---
+                }
+
+            }
+        }
+<span class="nc" id="L1037">        return false;</span>
+    }
+
+    /**
+     * Tells whether from the specified cell the occupier can attack.
+     *
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     * @param playerIndex Unique index of player.
+     *
+     * @return True if the occupier can attack from the cell otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean isCellNotBlocked(int columnIndex, int rowIndex, int playerIndex) throws TError {
+        // If the cell is inactive
+<span class="nc bnc" id="L1053" title="All 2 branches missed.">        if(this.getGameData().isCellInactive(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L1054">            return false;</span>
+        }
+
+        // If the cell is not occupied at all
+<span class="nc bnc" id="L1058" title="All 2 branches missed.">        if(!this.getGameData().isCellOccupied(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L1059">            return false;</span>
+        }
+
+        // The specified cell is occupied but by an another player
+<span class="nc bnc" id="L1063" title="All 2 branches missed.">        if(this.getGameData().getCell(columnIndex, rowIndex) != playerIndex) {</span>
+<span class="nc" id="L1064">            return false;</span>
+        }
+
+        // if there is no unoccupied cell in the attack area
+<span class="nc bnc" id="L1068" title="All 2 branches missed.">        if(!this.isAnEmptyCellInAttackRange(columnIndex, rowIndex)) {</span>
+<span class="nc" id="L1069">            return false;</span>
+        }
+
+<span class="nc" id="L1072">        return true;</span>
+    }
+
+    /**
+     * Tells whether the specified cell is reachable by other occupied cells independently its occupier.
+     *
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     *
+     * @return True if the specified cell is reachable by other occupied cells independently its occupier otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean isAnEmptyCellInAttackRange(int columnIndex, int rowIndex) throws TError {
+        //C-2
+<span class="nc bnc" id="L1087" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 2, rowIndex + 0)) {</span>
+<span class="nc" id="L1088">            return true;</span>
+        }
+<span class="nc bnc" id="L1090" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 2, rowIndex + 1)) {</span>
+<span class="nc" id="L1091">            return true;</span>
+        }
+<span class="nc bnc" id="L1093" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 2, rowIndex + 2)) {</span>
+<span class="nc" id="L1094">            return true;</span>
+        }
+
+        //C-1
+<span class="nc bnc" id="L1098" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 1, rowIndex - 1)) {</span>
+<span class="nc" id="L1099">            return true;</span>
+        }
+<span class="nc bnc" id="L1101" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 1, rowIndex + 0)) {</span>
+<span class="nc" id="L1102">            return true;</span>
+        }
+<span class="nc bnc" id="L1104" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 1, rowIndex + 1)) {</span>
+<span class="nc" id="L1105">            return true;</span>
+        }
+<span class="nc bnc" id="L1107" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex - 1, rowIndex + 2)) {</span>
+<span class="nc" id="L1108">            return true;</span>
+        }
+
+        //C0
+<span class="nc bnc" id="L1112" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex, rowIndex - 2)) {</span>
+<span class="nc" id="L1113">            return true;</span>
+        }
+<span class="nc bnc" id="L1115" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex, rowIndex - 1)) {</span>
+<span class="nc" id="L1116">            return true;</span>
+        }
+<span class="nc bnc" id="L1118" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex, rowIndex + 1)) {</span>
+<span class="nc" id="L1119">            return true;</span>
+        }
+<span class="nc bnc" id="L1121" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex, rowIndex + 2)) {</span>
+<span class="nc" id="L1122">            return true;</span>
+        }
+
+        //C+1
+<span class="nc bnc" id="L1126" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 1, rowIndex - 2)) {</span>
+<span class="nc" id="L1127">            return true;</span>
+        }
+<span class="nc bnc" id="L1129" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 1, rowIndex - 1)) {</span>
+<span class="nc" id="L1130">            return true;</span>
+        }
+<span class="nc bnc" id="L1132" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 1, rowIndex + 0)) {</span>
+<span class="nc" id="L1133">            return true;</span>
+        }
+<span class="nc bnc" id="L1135" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 1, rowIndex + 1)) {</span>
+<span class="nc" id="L1136">            return true;</span>
+        }
+
+        //C+2
+<span class="nc bnc" id="L1140" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 2, rowIndex - 2)) {</span>
+<span class="nc" id="L1141">            return true;</span>
+        }
+
+<span class="nc bnc" id="L1144" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 2, rowIndex - 1)) {</span>
+<span class="nc" id="L1145">            return true;</span>
+        }
+<span class="nc bnc" id="L1147" title="All 2 branches missed.">        if(this.isThisCellActiveAndNotOccupied(columnIndex + 2, rowIndex + 0)) {</span>
+<span class="nc" id="L1148">            return true;</span>
+        }
+<span class="nc" id="L1150">        return false;</span>
+    }
+
+    /**
+     * Tells whether the specified cell is active and not occupied.
+     * A cell is active when it is displayed on board.
+     *
+     * @param columnIndex Column index of specified cell
+     * @param rowIndex    Row index of specified cell
+     *
+     * @return True if the specified cell is active and not occupied otherwise false.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private boolean isThisCellActiveAndNotOccupied(int columnIndex, int rowIndex) throws TError {
+<span class="nc bnc" id="L1165" title="All 2 branches missed.">        if(this.getGameData().isCellExists(columnIndex, rowIndex)) {</span>
+<span class="nc bnc" id="L1166" title="All 2 branches missed.">            if(this.getGameData().getCell(columnIndex, rowIndex) == 0) {</span>
+<span class="nc" id="L1167">                return true;</span>
+            }
+        }
+<span class="nc" id="L1170">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     */
+    @Override
+    public final void startGame() throws TError {
+        // Status checking
+<span class="nc bnc" id="L1180" title="All 2 branches missed.">        if(this.getGameData().getGameProcessStatus() != ProcessStatusCode.PREPARED) {</span>
+<span class="nc" id="L1181">            throw new TError(&quot;Wrong status found&quot;);</span>
+        }
+
+        // Modify the status
+<span class="nc" id="L1185">        this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.RUNNING);</span>
+
+        // Animation
+<span class="nc" id="L1188">        this.showOnAllPlayBoard();      // Animation</span>
+<span class="nc" id="L1189">        this.showOnAllInfoBoard();       // Animation</span>
+<span class="nc" id="L1190">        this.showOnAllFaceBoard();       // Animation</span>
+        //
+<span class="nc" id="L1192">        this.nextRound();</span>
+<span class="nc" id="L1193">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void pauseGame() throws TError {
+        //---Note:
+<span class="nc" id="L1201">        boolean IsError = false;</span>
+<span class="nc" id="L1202">        ProcessStatusCode CurrentStatus = this.getGameData().getGameProcessStatus();</span>
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L1206" title="All 6 branches missed.">        if((CurrentStatus != ProcessStatusCode.RUNNING) &amp;&amp; (CurrentStatus != ProcessStatusCode.PAUSED) &amp;&amp; (CurrentStatus != ProcessStatusCode.STOPPED)) {</span>
+<span class="nc" id="L1207">            IsError = true;</span>
+        }
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L1212" title="All 2 branches missed.">        if(!IsError) {</span>
+            //---Note:
+<span class="nc" id="L1214">            this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.PAUSED);</span>
+            //---
+        }
+        else {
+
+<span class="nc" id="L1219">            throw new TError();</span>
+        }
+        //---
+
+<span class="nc" id="L1223">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void continueGame() throws TError {
+        //---Note:
+<span class="nc" id="L1231">        boolean IsError = false;</span>
+<span class="nc" id="L1232">        ProcessStatusCode CurrentStatus = this.getGameData().getGameProcessStatus();</span>
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L1236" title="All 4 branches missed.">        if((CurrentStatus != ProcessStatusCode.PAUSED) &amp;&amp; (CurrentStatus != ProcessStatusCode.RUNNING)) {</span>
+<span class="nc" id="L1237">            IsError = true;</span>
+        }
+        //---
+
+        //---Note:
+<span class="nc bnc" id="L1242" title="All 2 branches missed.">        if(!IsError) {</span>
+            //---Note:
+<span class="nc" id="L1244">            this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.RUNNING);</span>
+            //---
+        }
+        else {
+<span class="nc" id="L1248">            throw new TError();</span>
+        }
+        //---
+
+<span class="nc" id="L1252">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void stopGame() throws TError {
+        //
+<span class="nc" id="L1260">        ProcessStatusCode currentStatus = this.getGameData().getGameProcessStatus();</span>
+
+        //
+<span class="nc bnc" id="L1263" title="All 4 branches missed.">        if((currentStatus == ProcessStatusCode.STOPPED) || (currentStatus == ProcessStatusCode.RUNNING)) {</span>
+<span class="nc" id="L1264">            this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.STOPPED);</span>
+        }
+        else {
+<span class="nc" id="L1267">            throw new TError(&quot;At this stage the request is rejected!&quot;);</span>
+        }
+
+<span class="nc" id="L1270">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isGameRunning() {
+
+<span class="nc" id="L1278">        ProcessStatusCode currentStatus = this.getGameData().getGameProcessStatus();</span>
+
+<span class="nc bnc" id="L1280" title="All 2 branches missed.">        if(currentStatus == ProcessStatusCode.RUNNING) {</span>
+<span class="nc" id="L1281">            return true;</span>
+        }
+<span class="nc" id="L1283">        return false;</span>
+    }
+
+    /**
+     * Creates a player.
+     *
+     * @param playerColor The colour code of player.
+     *
+     * @return An {@code IPlayer} instance.
+     */
+    public final static IPlayer fabricateGamePlayer(String playerColor) {
+<span class="nc" id="L1294">        Player Output = new Player(playerColor);</span>
+<span class="nc" id="L1295">        return Output;</span>
+    }
+
+    /**
+     * Creates a player.
+     *
+     * @param playerColor The colour code of player.
+     * @param playerIndex The unique index of player.
+     *
+     * @return An {@code IPlayer} instance.
+     */
+    public final static IPlayer fabricateGamePlayer(String playerColor, byte playerIndex) {
+<span class="nc" id="L1307">        Player Output = new Player(playerColor, playerIndex);</span>
+
+<span class="nc" id="L1309">        return Output;</span>
+    }
+
+    /**
+     * Creates a human player.
+     *
+     * @param playerColor The colour code of player.
+     *
+     * @return An {@code IPlayer} instance.
+     */
+    public static IPlayer fabricateHumanPlayer(String playerColor) {
+<span class="nc" id="L1320">        return new HumanPlayer(playerColor);</span>
+    }
+
+    /**
+     * Creates an artificial player.
+     *
+     * @param playerColor The colour code of player.
+     *
+     * @return An {@code IPlayer} instance.
+     */
+    public static IPlayer fabricateAutoPlayer(String playerColor) {
+<span class="nc" id="L1331">        return new AIPlayer(playerColor);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public IGameData getGameData() {
+<span class="nc" id="L1338">        return (IGameData) super.getModel();</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void setGameData(IGameData gameData) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L1346" title="All 2 branches missed.">        if(gameData == null) {</span>
+<span class="nc" id="L1347">            throw new TError(&quot;Property sould not be null&quot;);</span>
+        }
+<span class="nc" id="L1349">        super.setModel((IModel) gameData);</span>
+<span class="nc" id="L1350">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    public void addPlayBoard(IPlayBoard playBoard) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L1357" title="All 2 branches missed.">        if(playBoard == null) {</span>
+<span class="nc" id="L1358">            throw new TError(&quot;Property sould not be null&quot;);</span>
+        }
+        // Store value
+<span class="nc" id="L1361">        super.addView((IView) playBoard);</span>
+<span class="nc" id="L1362">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    public void addInfoBoard(IInfoBoard infoBoard) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L1369" title="All 2 branches missed.">        if(infoBoard == null) {</span>
+<span class="nc" id="L1370">            throw new TError(&quot;Property sould not be null&quot;);</span>
+        }
+        // Store value
+<span class="nc" id="L1373">        super.addView((IView) infoBoard);</span>
+<span class="nc" id="L1374">    }</span>
+
+    /**
+     * {@inheritDoc}
+     */
+    public void addFaceBoard(IFaceBoard faceBoard) throws TError {
+        // Input checkings
+<span class="nc bnc" id="L1381" title="All 2 branches missed.">        if(faceBoard == null) {</span>
+<span class="nc" id="L1382">            throw new TError(&quot;Property sould not be null&quot;);</span>
+        }
+        // Store value
+<span class="nc" id="L1385">        super.addView((IView) faceBoard);</span>
+
+<span class="nc" id="L1387">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
