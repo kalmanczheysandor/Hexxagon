@@ -16,22 +16,28 @@ public interface IPage {
      * Typically used to initialise the components placed on the page.
      * The event is triggered by that navigator component to which the page is added.
      * Initialisation event is not occurred when the class is instantiated but after it is attached to a navigator component.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    public void onInit();
+    public void onInit() throws TError;
 
     /**
      * Component draw event.
      * Typically used to draw the components placed on the page.
      * The event is triggered by that navigator component to which the page is added.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    public void onDraw();
+    public void onDraw() throws TError;
 
     /**
      * Component after draw event.
      *
      * The event is triggered by that navigator component to which the page is added.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    public void onAfterDraw();
+    public void onAfterDraw() throws TError;
 
     /**
      * Attaches the navigator object to the page component.

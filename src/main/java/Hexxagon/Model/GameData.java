@@ -89,12 +89,12 @@ public class GameData extends TModel implements IGameData, Serializable {
      * The state of the game
      */
     private ProcessStatusCode gameProcessStatus = ProcessStatusCode.NOTHING;
-
+    
     /**
      * Creates a {@code GameData} instance.
      */
-    public GameData() {
-        logger.trace("GameData constructed!");
+    public GameData() throws TError {
+      
     }
 
     /**
@@ -695,7 +695,7 @@ public class GameData extends TModel implements IGameData, Serializable {
 
         // If it is invocked when the playing is on
         if((this.gameProcessStatus != ProcessStatusCode.INITIALISED) && (this.gameProcessStatus != ProcessStatusCode.PREPARED) && (this.gameProcessStatus != ProcessStatusCode.STOPPED)) {
-            //????? throw new TError("The setting of gameplay is not allowed when the game is on!");
+            //?????? throw new TError("Not allowed game state!");
         }
 
         // Save values

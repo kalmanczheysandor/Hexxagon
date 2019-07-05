@@ -1,5 +1,6 @@
 package Window;
 
+import Hexxagon.Model.GameData;
 import Hexxagon.Model.IGameData;
 import Support.TError;
 import Support.IItem;
@@ -34,7 +35,7 @@ public class Storage extends TModel implements IStorage {
     /**
      * Stores the data component of the Hexxagon module.
      */
-    private IGameData gameData;
+    private IGameData gameData  = new GameData();
 
     /**
      * List of all added board mode options.
@@ -45,6 +46,17 @@ public class Storage extends TModel implements IStorage {
      */
     private ArrayList<TSelectItem> difficultyTypeList = new ArrayList<>();
 
+    private static boolean isInstantiated   = false;
+    
+    
+    public Storage() throws TError {
+        
+    }
+
+    
+    
+    
+    
     /**
      * {@inheritDoc}
      */
@@ -62,6 +74,8 @@ public class Storage extends TModel implements IStorage {
         if(gameData == null) {
             throw new TError("The parameter sould not be null!");
         }
+        
+       
         this.gameData = gameData;
     }
 

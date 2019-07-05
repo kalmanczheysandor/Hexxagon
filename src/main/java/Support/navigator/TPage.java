@@ -35,14 +35,17 @@ public abstract class TPage extends TView implements IPage {
     /**
      * Method to draw graphical components and invoked by the draw event.
      *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      * @return Reference to the top node of component tree.
      */
-    protected abstract Object drawContent();
+    protected abstract Object drawContent() throws TError;
 
     /**
      * Method to initialise components and invoked by the init event.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    protected abstract void initComponent();
+    protected abstract void initComponent() throws TError;
 
     /**
      * Creates a {@code TPage} instance.
@@ -57,7 +60,7 @@ public abstract class TPage extends TView implements IPage {
      * {@inheritDoc}
      */
     @Override
-    public void onInit() {
+    public void onInit() throws TError {
         if(!this.isInitialised) {
             this.initComponent();
         }
@@ -68,7 +71,7 @@ public abstract class TPage extends TView implements IPage {
      * {@inheritDoc}
      */
     @Override
-    public void onDraw() {
+    public void onDraw() throws TError {
         this.insideRootNode = this.drawContent();
     }
 

@@ -1,5 +1,6 @@
 package Window;
 
+import Main.Main;
 import Support.IItem;
 import Support.TError;
 import java.beans.PropertyChangeEvent;
@@ -9,6 +10,9 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBuilder;
+import javafx.scene.control.ListCell;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -43,11 +47,14 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
     /**
      * Object of board mode select box graphical component.
      */
-    private ComboBox boardSelectInput;
+    private ComboBox boardShapeInput;
     /**
      * Object of difficulty level select box graphical component.
      */
-    private ComboBox difficultySelectInput;
+    private ComboBox difficultyLevelInput;
+
+    private static final Image iconTitle = new Image(SettingsPage.class.getResourceAsStream(Main.folderImage + "/title.gif"));
+    private ImageView imageTitle;
 
     /**
      * Creates a {@code SettingsPage} instance.
@@ -62,7 +69,12 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
      * {@inheritDoc}
      */
     @Override
-    protected void initComponent() {
+    protected void initComponent() throws TError {
+
+        // Title image
+        imageTitle = new ImageView(iconTitle);
+        imageTitle.setScaleX(0.8);
+        imageTitle.setScaleY(0.8);
 
         // Component initialisation
         this.backButton = new Button("Back");
@@ -80,79 +92,84 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
         // Component initialisation
         this.playButton = new Button("Play");
         this.playButton.setOnMouseClicked((event) -> {
-
             try {
-                this.getContainer().showPlayPage();
+                //this.getContainer().showPlayPage();
                 this.getContainer().startGame();
             }
             catch(TError ex) {
                 logger.error(ex.toString());
             }
 
-        }
-        );
-
-        this.playButton.setDisable(
-                true);
+        });
+        this.playButton.setDisable(true);
 
         // Component initialisation
         ObservableList boardList = FXCollections.observableArrayList();
         for(IStorage.IBoardModeItem item : this.getContainer().getStorage().getBoardModeList()) {
             boardList.add(item.getIndex(), item.getCaption());
         }
+        this.boardShapeInput = ComboBoxBuilder.create().id("uneditable-combobox").promptText("Make a choice...").items(boardList).build();
+        this.boardShapeInput.setMinWidth(300);
+        this.boardShapeInput.setOnAction((event) -> {
+            try {
+                int selectedKey = this.boardShapeInput.getSelectionModel().getSelectedIndex();
 
-        this.boardSelectInput = ComboBoxBuilder.create()
-                .id("uneditable-combobox")
-                .promptText("Make a choice...")
-                .items(boardList)
-                .build();
-        this.boardSelectInput.setMinWidth(300);
-        this.boardSelectInput.setOnAction(
-                (event) -> {
-                    try {
-                        int selectedKey = this.boardSelectInput.getSelectionModel().getSelectedIndex();
-
-                        this.getContainer().selectBoardMode(selectedKey);
-                    }
-                    catch(TError ex) {
-                        logger.error(ex.toString());
-                    }
+                this.getContainer().selectBoardMode(selectedKey);
+            }
+            catch(TError ex) {
+                logger.error(ex.toString());
+            }
+        });
+        this.boardShapeInput.setButtonCell(new ListCell() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+                super.updateItem(item, empty);
+                if(empty || item == null) {
+                    // styled like -fx-prompt-text-fill:
+                    setStyle("-fx-text-fill: red");
                 }
-        );
+                else {
+                    setStyle("-fx-text-fill: black");
+                    setText(item.toString());
+                }
+            }
+
+        });
 
         // Component initialisation
         ObservableList difficultyList = FXCollections.observableArrayList();
-        for(TSelectItem item
-                : this.getContainer()
-                        .getStorage().getDifficultyTypeList()) {
+        for(TSelectItem item : this.getContainer().getStorage().getDifficultyTypeList()) {
             difficultyList.add(item.getKey(), item.getCaption());
         }
         ObservableList fightTypeList = FXCollections.observableArrayList("Human player vs human player", "Human player vs AI player", "AI player vs AI player");
+        this.difficultyLevelInput = ComboBoxBuilder.create().id("uneditable-combobox").promptText("Make a choice...").items(difficultyList).build();
+        this.difficultyLevelInput.setMinWidth(300);
+        this.difficultyLevelInput.setOnAction((event) -> {
+            try {
+                int selectedKey = this.difficultyLevelInput.getSelectionModel().getSelectedIndex();
 
-        this.difficultySelectInput = ComboBoxBuilder.create()
-                .id("uneditable-combobox")
-                .promptText("Make a choice...")
-                .items(difficultyList)
-                .build();
-
-        this.difficultySelectInput.setMinWidth(
-                300);
-
-        this.difficultySelectInput.setOnAction(
-                (event) -> {
-                    try {
-                        int selectedKey = this.difficultySelectInput.getSelectionModel().getSelectedIndex();
-
-                        this.getContainer().selectDifficulty(selectedKey);
-                    }
-                    catch(TError ex) {
-                        logger.error(ex.toString());
-                    }
+                this.getContainer().selectDifficulty(selectedKey);
+            }
+            catch(TError ex) {
+                logger.error(ex.toString());
+            }
+        });
+        this.difficultyLevelInput.setDisable(true);
+         this.difficultyLevelInput.setButtonCell(new ListCell() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+                super.updateItem(item, empty);
+                if(empty || item == null) {
+                    // styled like -fx-prompt-text-fill:
+                    setStyle("-fx-text-fill: red");
                 }
-        );
+                else {
+                    setStyle("-fx-text-fill: black");
+                    setText(item.toString());
+                }
+            }
 
-        this.difficultySelectInput.setDisable(
-                true);
+        });
 
     }
 
@@ -160,14 +177,19 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
      * {@inheritDoc}
      */
     @Override
-    protected Object drawContent() {
+    protected Object drawContent() throws TError {
 
         StackPane menuPanel = this.createMenuPanel();
 
         AnchorPane root = new AnchorPane();
+        root.getChildren().add(imageTitle);
         root.getChildren().add(this.backButton);
         root.getChildren().add(this.playButton);
         root.getChildren().add(menuPanel);
+
+        // Anchoring title
+        AnchorPane.setTopAnchor(imageTitle, Double.valueOf(0));
+        AnchorPane.setLeftAnchor(imageTitle, Double.valueOf(10));
 
         // Anchoring of menupanel
         AnchorPane.setLeftAnchor(menuPanel, Double.valueOf(0));
@@ -185,7 +207,6 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
 
         // Set css style
         root.setId("RootNode");
-        // root.getStylesheets().add(SettingsPage.class.getResource(ISettingsPage.folderCSS+"/SettingsPage.css").toExternalForm());
         return root;
     }
 
@@ -206,9 +227,9 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
 
         VBox centerBox = VBoxBuilder.create().alignment(Pos.CENTER_LEFT).spacing(15).build();
         centerBox.getChildren().add(label01);
-        centerBox.getChildren().add(this.boardSelectInput);
+        centerBox.getChildren().add(this.boardShapeInput);
         centerBox.getChildren().add(label02);
-        centerBox.getChildren().add(this.difficultySelectInput);
+        centerBox.getChildren().add(this.difficultyLevelInput);
         centerBox.setMaxWidth(300);
 
         StackPane root = new StackPane(centerBox);
@@ -221,7 +242,7 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
      * {@inheritDoc}
      */
     @Override
-    public void onAfterDraw() {
+    public void onAfterDraw() throws TError {
 
     }
 
@@ -241,10 +262,10 @@ public class SettingsPage extends JFXPage implements ISettingsPage {
             if(boardKey >= 0) {
                 isAutoPlayer = this.getContainer().getStorage().getBoardMode(boardKey).isAIPlayerAdded();
                 if(isAutoPlayer) {
-                    this.difficultySelectInput.setDisable(false);
+                    this.difficultyLevelInput.setDisable(false);
                 }
                 else {
-                    this.difficultySelectInput.setDisable(true);
+                    this.difficultyLevelInput.setDisable(true);
                 }
             }
 

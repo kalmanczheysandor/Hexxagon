@@ -282,10 +282,45 @@ public final class BoardState implements IBoardState {
         return count;
     }
 
+    
     /**
-     * {@inheritDoc}
+     * It presents the output as the matrix is written in java code.
+     * @return 
      */
     @Override
+    public String toString() {
+
+       
+        String str = "";
+        for(int rowIndex = 0; rowIndex < this.board.length; rowIndex++) {
+            
+            for(int columnIndex = 0; columnIndex < this.board[rowIndex].length; columnIndex++) {
+
+                switch (this.board[rowIndex][columnIndex]) {
+                    case IBoardState.symbolOfInactiveCell:
+                        str += "*|";
+                        break;
+                    case IBoardState.symbolOfEmptyCell:
+                        str += "0|";
+                        break;
+                    case IBoardState.symbolOfFirstPlayer:
+                        str += "1|";
+                        break;
+                    case IBoardState.symbolOfSecondPlayer:
+                        str += "2|";
+                        break;
+                }
+
+            }
+            str +="\n";
+        }
+        return str;
+    }
+    
+    
+    
+    
+    /*@Override
     public String toString() {
 
         String rowsStr = "";
@@ -301,16 +336,16 @@ public final class BoardState implements IBoardState {
 
                 switch (this.board[columnIndex][rowIndex]) {
                     case IBoardState.symbolOfInactiveCell:
-                        AColumnStr += " |";
+                        AColumnStr += "*|";
                         break;
                     case IBoardState.symbolOfEmptyCell:
-                        AColumnStr += "_|";
+                        AColumnStr += "0|";
                         break;
                     case IBoardState.symbolOfFirstPlayer:
-                        AColumnStr += "X|";
+                        AColumnStr += "1|";
                         break;
                     case IBoardState.symbolOfSecondPlayer:
-                        AColumnStr += "O|";
+                        AColumnStr += "2|";
                         break;
 
                 }
@@ -320,7 +355,7 @@ public final class BoardState implements IBoardState {
         }
         return rowsStr;
     }
-
+*/
     /**
      * {@inheritDoc}
      */

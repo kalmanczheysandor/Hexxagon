@@ -14,9 +14,14 @@ import Support.mvc.IView;
 import Support.mvc.TController;
 import java.util.ArrayList;
 import Hexxagon.Model.IField;
+import Hexxagon.View.IFaceBoard;
 import Hexxagon.View.IInfoBoard;
 import Hexxagon.View.IPlayBoard;
 import Support.mvc.IModel;
+import java.util.Calendar;
+import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
+import javafx.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,34 +68,6 @@ public class GameController extends TController implements IGameController {
     };
 
     /**
-     * Forces all info board visual components to refresh themselves.
-     *
-     * @throws TError Thrown if an unrecoverable error was occurred.
-     */
-    private void refreshOnAllGameInfo() throws TError {
-        ArrayList<IView> list = this.getViewList();
-        for(IView view : list) {
-            if(view instanceof IInfoBoard) {
-                ((IInfoBoard) view).refresh();
-            }
-        }
-    }
-
-    /**
-     * Forces all info board visual components to display themselves.
-     *
-     * @throws TError Thrown if an unrecoverable error was occurred.
-     */
-    private void showOnAllGameInfo() throws TError {
-        ArrayList<IView> list = this.getViewList();
-        for(IView view : list) {
-            if(view instanceof IInfoBoard) {
-                ((IInfoBoard) view).show();
-            }
-        }
-    }
-
-    /**
      * Forces all play board visual components to display the end game dialog.
      *
      * @param caseCode    The case code of how was the game finished.
@@ -107,12 +84,84 @@ public class GameController extends TController implements IGameController {
         }
     }
 
+    
+    
+    /**
+     * Forces all face board visual components to display the wait animation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void animateWaitOnFaceBoard() throws TError {
+        ArrayList<IView> list = this.getViewList();
+        for(IView view : list) {
+            if(view instanceof IFaceBoard) {
+                ((IFaceBoard) view).animateWait();
+            }
+        }
+    }
+
+     /**
+     * Forces all face board visual components to display the thinking animation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void animateThinkingOnFaceBoard() throws TError {
+        ArrayList<IView> list = this.getViewList();
+        for(IView view : list) {
+            if(view instanceof IFaceBoard) {
+                ((IFaceBoard) view).animateThink();
+            }
+        }
+    }
+
+    /**
+     * Forces all face board visual components to display themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showOnAllFaceBoard() throws TError {
+        ArrayList<IView> list = this.getViewList();
+        for(IView view : list) {
+            if(view instanceof IFaceBoard) {
+                ((IFaceBoard) view).show();
+            }
+        }
+    }
+
+    /**
+     * Forces all info board visual components to refresh themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void refreshOnAllInfoBoard() throws TError {
+        ArrayList<IView> list = this.getViewList();
+        for(IView view : list) {
+            if(view instanceof IInfoBoard) {
+                ((IInfoBoard) view).refresh();
+            }
+        }
+    }
+
+    /**
+     * Forces all info board visual components to display themselves.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    private void showOnAllInfoBoard() throws TError {
+        ArrayList<IView> list = this.getViewList();
+        for(IView view : list) {
+            if(view instanceof IInfoBoard) {
+                ((IInfoBoard) view).show();
+            }
+        }
+    }
+
     /**
      * Forces all play board visual components to refresh themselves.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private void refreshOnAllGameBoard() throws TError {
+    private void refreshOnAllPlayBoard() throws TError {
         ArrayList<IView> list = this.getViewList();
         for(IView view : list) {
             if(view instanceof IPlayBoard) {
@@ -126,7 +175,7 @@ public class GameController extends TController implements IGameController {
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private void showOnAllGameBoard() throws TError {
+    private void showOnAllPlayBoard() throws TError {
         ArrayList<IView> list = this.getViewList();
         for(IView view : list) {
             if(view instanceof IPlayBoard) {
@@ -177,6 +226,9 @@ public class GameController extends TController implements IGameController {
         for(IView view : list) {
             if(view instanceof IPlayBoard) {
                 ((IPlayBoard) view).animateWhenNotAllowedPlayerClickedOnAPit(columnIndex, rowIndex);
+            }
+            if(view instanceof IFaceBoard) {
+                ((IFaceBoard) view).animateSurprise();
             }
         }
     }
@@ -315,30 +367,29 @@ public class GameController extends TController implements IGameController {
         }
         else {
             logger.debug("Not Succes");
-
         }
 
     }
 
     /**
-     * Annak a cellának a kijelölése, ahonnan a természetes játékos lépni szándékozik.
+     * Entitles a cell to be base cell of the following attack.
      *
-     * @param clickedCellColumnIndex Annak a cellának az oszlopindexe, ahonnan a lépés történik.
-     * @param clickedCellRowIndex    Annak a cellának a sorindexe, ahonnan a lépés történik.
-     * @param playerIndex            A cellát kiválasztani szándékozó természetes játékos indexe.
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     * @param playerIndex The unique index of player clicked on cell.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private void chooseAttackerCell(int clickedCellColumnIndex, int clickedCellRowIndex, byte playerIndex) throws TError {
+    private void chooseAttackerCell(int columnIndex, int rowIndex, byte playerIndex) throws TError {
 
         // Input checking
-        if(!this.getGameData().isCellExists(clickedCellColumnIndex, clickedCellRowIndex)) {
-            throw new TError("Requested coordinate[" + clickedCellColumnIndex + "," + clickedCellRowIndex + "] is out of range!");
+        if(!this.getGameData().isCellExists(columnIndex, rowIndex)) {
+            throw new TError("Requested coordinate[" + columnIndex + "," + rowIndex + "] is out of range!");
         }
 
         try {
 
-            IField clickedField = this.getGameData().getCellAsField(clickedCellColumnIndex, clickedCellRowIndex);
+            IField clickedField = this.getGameData().getCellAsField(columnIndex, rowIndex);
             IField previousClickedField = this.getGameData().getPreviousClickedField();
 
             int previousClickedColumnIndex = -1;        // It is out of coordinate range
@@ -375,7 +426,7 @@ public class GameController extends TController implements IGameController {
             }
 
             // There is no unoccupied cell around
-            if(!this.isPossibilityToSpreadFromThisCellByPlayer(clickedCellColumnIndex, clickedCellRowIndex, playerIndex)) {
+            if(!this.isCellNotBlocked(columnIndex, rowIndex, playerIndex)) {
                 throw new TFailed();
                 //TheLogger.trace("A cellából nem tud elmenni");
             }
@@ -387,40 +438,35 @@ public class GameController extends TController implements IGameController {
                 this.getGameData().removeLastClickedField();
             }
             else { // When the targeted/clicked actual and previous cell is not the same. In this case the the spread area should be reallocated 
-                this.showAttackZoneOnAllGameBoard(clickedCellColumnIndex, clickedCellRowIndex);
+                this.showAttackZoneOnAllGameBoard(columnIndex, rowIndex);
                 this.getGameData().setPreviousClickedField(clickedField);
             }
 
         }
         catch(TFailed exp) {
-            this.informNotAllowedPlayerClickedOnAPitOnAllGameBoard(clickedCellColumnIndex, clickedCellRowIndex);
+            this.informNotAllowedPlayerClickedOnAPitOnAllGameBoard(columnIndex, rowIndex);
         }
     }
 
     /**
-     * Annak a cellának a lefoglalása, ahova a természetes vagy gépi játékos
-     * lépett. A lefoglalás hatására a környező cellák is lefoglalódhatnak.
+     * Tries to capture the target cell and its area from the base cell.
      *
-     * @param fromColumnIndex     Annak a cellának az oszlopindexe, ahonnan a lépés
-     *                            történik.
-     * @param fromRowIndex        Annak a cellának a sorindexe, ahonnan a lépés
-     *                            történik.
-     * @param targetColumnIndex   Annak a cellának az oszlopindexe, ahova a lépés
-     *                            történik.
-     * @param targetRowIndex      Annak a cellának a sorindexe, ahova a lépés
-     *                            történik.
-     * @param attackerPlayerIndex XXXX
+     * @param baseColumnIndex     The column index of the source cell.
+     * @param baseRowIndex        The row index of the source cell.
+     * @param targetColumnIndex   The column index of the target cell.
+     * @param targetRowIndex      The row index of the target cell.
+     * @param attackerPlayerIndex Unique index of player attacking.
      *
-     * @return A végrehalytás sikerességének logikai értéke.
+     * @return True if the attempt of capture was successful otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private boolean tryToCaptureTheTarget(int fromColumnIndex, int fromRowIndex, int targetColumnIndex, int targetRowIndex, byte attackerPlayerIndex) throws TError {
+    private boolean tryToCaptureTheTarget(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex, byte attackerPlayerIndex) throws TError {
 
         try {
 
             // The source cell does not exists
-            if(!this.getGameData().isCellExists(fromColumnIndex, fromRowIndex)) {
+            if(!this.getGameData().isCellExists(baseColumnIndex, baseRowIndex)) {
                 throw new TError("Source cell is not exists!");
             }
 
@@ -430,7 +476,7 @@ public class GameController extends TController implements IGameController {
             }
 
             // It tried to attack from inactive cell
-            if(this.getGameData().isCellInactive(fromColumnIndex, fromRowIndex)) {
+            if(this.getGameData().isCellInactive(baseColumnIndex, baseRowIndex)) {
                 logger.debug("E03");
                 throw new TFailed();
             }
@@ -448,18 +494,18 @@ public class GameController extends TController implements IGameController {
             }
 
             // The source cell is occupied by anotehr palyer
-            if(this.getGameData().getCell(fromColumnIndex, fromRowIndex) != attackerPlayerIndex) {
+            if(this.getGameData().getCell(baseColumnIndex, baseRowIndex) != attackerPlayerIndex) {
                 logger.debug("E06");
                 throw new TFailed();
             }
 
             // If it is out of the legal attack range
-            if(!isInTheAttackRange(fromColumnIndex, fromRowIndex, targetColumnIndex, targetRowIndex)) {
+            if(!isInTheAttackRange(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {
                 logger.debug("E07");
                 throw new TFailed();
             }
 
-            if(this.isInTheFissionAttackZone(fromColumnIndex, fromRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area01
+            if(this.isInTheFissionZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area01
 
                 this.getGameData().setCellOccupiedByPlayer(targetColumnIndex, targetRowIndex, attackerPlayerIndex);
                 this.showPitAsOccupiedByOnAllGameBoard(targetColumnIndex, targetRowIndex, attackerPlayerIndex);
@@ -472,13 +518,13 @@ public class GameController extends TController implements IGameController {
                 this.getGameData().removeLastClickedField();
 
             }
-            else if(this.isInTheJumpAttackZone(fromColumnIndex, fromRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area02
+            else if(this.isInTheJumpZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {// It was clicked in the Area02
 
                 this.getGameData().setCellOccupiedByPlayer(targetColumnIndex, targetRowIndex, attackerPlayerIndex);
                 this.showPitAsOccupiedByOnAllGameBoard(targetColumnIndex, targetRowIndex, attackerPlayerIndex);
 
                 // Release the source cell because it is a jump
-                this.giveUpCell(fromColumnIndex, fromRowIndex);
+                this.giveUpCell(baseColumnIndex, baseRowIndex);
 
                 // Occupie the neighbourhood
                 this.occupieAdjacentCells(targetColumnIndex, targetRowIndex, attackerPlayerIndex);
@@ -498,24 +544,24 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Adott cella felszabadításának adminisztrálása.
+     * Makes a cell unoccupied.
      *
-     * @param targetColumnIndex A cella oszlopindexe.
-     * @param targetRowIndex    A cella sorindexe.
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private void giveUpCell(int targetColumnIndex, int targetRowIndex) throws TError {
+    private void giveUpCell(int columnIndex, int rowIndex) throws TError {
         // Input checkings
-        if(!this.getGameData().isCellExists(targetColumnIndex, targetRowIndex)) {
+        if(!this.getGameData().isCellExists(columnIndex, rowIndex)) {
             throw new TError("The given coordinate[targetColumnIndex, targetRowIndex] is out of range!");
         }
 
         // Store value
-        this.getGameData().setCellLiberated(targetColumnIndex, targetRowIndex);
+        this.getGameData().setCellLiberated(columnIndex, rowIndex);
 
         // Force view component 
-        this.showPitAsAbandonedAllGameBoard(targetColumnIndex, targetRowIndex);
+        this.showPitAsAbandonedAllGameBoard(columnIndex, rowIndex);
 
     }
 
@@ -543,47 +589,9 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Adott cella elfoglalásának megkisérlése.
+     * It makes all empty cell captured by the specified player.
      *
-     * @param columnIndex Az elfoglalandó cella oszlopindexe.
-     * @param rowIndex    Az elfoglalandó cella sorindexe.
-     * @param playerIndex A támadó játékos indexe.
-     *
-     * @throws TError Thrown if an unrecoverable error was occurred.
-     */
-    private void tryToCaptureACell(int columnIndex, int rowIndex, byte playerIndex) throws TError {
-        // Input checkings
-        if(columnIndex < 0 || columnIndex > GamePlay.maximumExpectedStandColumnIndex) {
-            throw new TError("The value of specified property 'columnIndex' is out of the allowed range. It was " + columnIndex + "!");
-        }
-
-        if(rowIndex < 0 || rowIndex > GamePlay.maximumExpectedStandRowIndex) {
-            throw new TError("The value of specified property 'rowIndex' is out of the allowed range. It was " + rowIndex + "!");
-        }
-
-        if(!this.getGameData().isPlayerExists(playerIndex)) {
-            throw new TError("Player was not found");
-        }
-
-        //
-        if(this.getGameData().isCellOccupied(columnIndex, rowIndex)) {
-
-            byte value = this.getGameData().getCell(columnIndex, rowIndex);
-            if(value != playerIndex) {
-                this.getGameData().setCellOccupiedByPlayer(columnIndex, rowIndex, playerIndex);
-            }
-        }
-    }
-
-    /**
-     * A metődus elfoglalja az összes még szabad cellát. Ez a metódus akkor
-     * szabad meghívni, amikor a játék szabályainak megfelelőean az adott
-     * játékos ellenfele nem tud lépni, amikor pedig ő következne. A játék
-     * szabályainak értelmében, ilyenkor ujra és ujra az aktuális játékos
-     * léphet. Pontosabban mondva, minden szabad cella átadódik neki és a játék
-     * végetér
-     *
-     * @param playerIndex A játékos indexe.
+     * @param playerIndex Unique index of specified player.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -609,7 +617,7 @@ public class GameController extends TController implements IGameController {
 
         //
         //this.refreshOnAllGameInfo();
-        this.refreshOnAllGameBoard();
+        this.refreshOnAllPlayBoard();
 
     }
 
@@ -625,10 +633,10 @@ public class GameController extends TController implements IGameController {
      */
     private boolean isInTheAttackRange(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
 
-        if(this.isInTheFissionAttackZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {
+        if(this.isInTheFissionZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {
             return true;
         }
-        if(this.isInTheJumpAttackZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {
+        if(this.isInTheJumpZone(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {
             return true;
         }
 
@@ -636,18 +644,16 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * A metódus arra ad választ, hogy a két cella közötti távolság az osztódási
-     * távolságban van-e.
+     * Tells whether the target cell is in the fission zone.
      *
-     * @param baseColumnIndex   A kiindulási cella oszlopindexe.
-     * @param baseRowIndex      A kiindulási cella sorindexe.
-     * @param targetColumnIndex A cél cella oszlopindexe.
-     * @param targetRowIndex    A cél cella sorindexe.
+     * @param baseColumnIndex   The column index of the source cell.
+     * @param baseRowIndex      The row index of the source cell.
+     * @param targetColumnIndex The column index of the target cell.
+     * @param targetRowIndex    The row index of the target cell.
      *
-     * @return Igaz, ha a távolságon belül van, Hamis, ha a távolságon kivül
-     *         van.
+     * @return True if the target cell is in the fission zone otherwise false.
      */
-    private boolean isInTheFissionAttackZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+    private boolean isInTheFissionZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
 
         for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfFissionAttackZone) {
             int attackColumnIndex = baseColumnIndex + relativeCoordinate.getX();
@@ -660,18 +666,16 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * A metódus arra ad választ, hogy a két cella közötti távolság az ugrási
-     * távolságban van-e.
+     * Tells whether the target cell is in the jump zone.
      *
-     * @param baseColumnIndex   A kiindulási cella oszlopindexe.
-     * @param baseRowIndex      A kiindulási cella sorindexe.
-     * @param targetColumnIndex A cél cella oszlopindexe.
-     * @param targetRowIndex    A cél cella sorindexe.
+     * @param baseColumnIndex   The column index of the source cell.
+     * @param baseRowIndex      The row index of the source cell.
+     * @param targetColumnIndex The column index of the source cell.
+     * @param targetRowIndex    The row index of the source cell.
      *
-     * @return Igaz, ha a távolságon belül van, Hamis, ha a távolságon kivül
-     *         van.
+     * @return True if the target cell is in the jump zone otherwise false.
      */
-    private boolean isInTheJumpAttackZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+    private boolean isInTheJumpZone(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
 
         for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfJumpAttackZone) {
             int attackColumnIndex = baseColumnIndex + relativeCoordinate.getX();
@@ -682,6 +686,87 @@ public class GameController extends TController implements IGameController {
         }
         return false;
 
+    }
+
+    private Task<IOperator> getStepTask(byte[][] board, IAIPlayer player, byte playerIndex) throws TError {
+        // Input checkings
+        if(board == null) {
+            throw new TError("Parameter \"board\" must not be null!");
+        }
+        if(player == null) {
+            throw new TError("Parameter \"player\" must not be null!");
+        }
+
+        final GameController me = this;
+        Task<IOperator> stepTask = new Task<IOperator>() {
+            @Override
+            protected IOperator call() throws TError, Exception {
+
+                me.animateThinkingOnFaceBoard();
+
+                long beginTime = Calendar.getInstance().getTime().getTime();
+                long borderTime = beginTime + (2000);
+
+                // Determine next step
+                IOperator opr = player.takeYourStep(board);
+
+                // Wait until minimum waiting time is over
+                do {
+                    if(Calendar.getInstance().getTime().getTime() <= borderTime) {
+                        Thread.sleep(200);
+                    }
+                    else {
+                        break;
+                    }
+                }
+                while(1 == 1);
+
+                if(opr != null) {
+                    if(me.isGameRunning()) {
+                        me.showAttackZoneOnAllGameBoard(opr.getBaseColumnIndex(), opr.getBaseRowIndex());
+                    }
+
+                    Thread.sleep(800);
+
+                    if(me.isGameRunning()) {
+                        me.removeAttackZoneOnAllGameBoard();
+                    }
+                }
+
+                return opr;
+            }
+        };
+
+        stepTask.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+            @Override
+            public void handle(WorkerStateEvent Event) {
+
+                try {
+
+                    IOperator opr = (IOperator) Event.getSource().getValue();
+
+                    if(opr != null) {
+
+                        me.animateWaitOnFaceBoard();
+
+                        if(me.isGameRunning()) {
+
+                            me.autoPlayerCellStep(opr.getBaseColumnIndex(), opr.getBaseRowIndex(), opr.getTargetColumnIndex(), opr.getTargetRowIndex(), playerIndex);
+                        }
+                    }
+
+                }
+                catch(TError ex) {
+                    logger.error(ex.toString());
+                }
+                catch(Exception ex) {
+                    logger.error(ex.toString());
+                }
+
+            }
+        });
+
+        return stepTask;
     }
 
     /**
@@ -705,19 +790,16 @@ public class GameController extends TController implements IGameController {
         StatusCode currentStatus = this.getGameData().getStatus();
 
         if(currentStatus == StatusCode.BoardFullFinish) {
-            logger.debug("Case001");
             isFinish = true;
             caseCode = IPlayBoard.FinishCodeEnum.BoardFull;
         }
         else if(currentStatus == StatusCode.EnemyFallFinish) {
-            logger.debug("Case002");
             isFinish = true;
             caseCode = IPlayBoard.FinishCodeEnum.EnemyFall;
 
             this.captureAllEmptyCellByThePlayer(lastPlayerIndex);
         }
         else if(currentStatus == StatusCode.EnemyBlockedFinish) {
-           logger.debug("Case003");
             isFinish = true;
             caseCode = IPlayBoard.FinishCodeEnum.EnemyBlocked;
 
@@ -745,43 +827,21 @@ public class GameController extends TController implements IGameController {
             final IPlayer player = this.getGameData().getPlayer(nextPlayerIndex);
 
             if(player.isAutoPlayer()) {
+
                 logger.debug("AutoPlayer");
                 byte[][] board = this.getGameData().getCells();
                 IAIPlayer artificialPlayer = (IAIPlayer) player;
 
-                final GameController me = this;
-                new Thread() {
-                    @Override
-                    public void run() {
-
-                        try {
-                            IOperator opr = artificialPlayer.takeYourStep(board);
-                            Thread.sleep(2000);
-                            if(opr != null) {
-                                me.autoPlayerCellStep(opr.getBaseColumnIndex(), opr.getBaseRowIndex(), opr.getTargetColumnIndex(), opr.getTargetRowIndex(), nextPlayerIndex);
-                            }
-                            else {
-                                logger.debug("AUTOPLAYER >>>>>>>>> NO STEP");
-                            }
-
-                        }
-                        catch(TError ex) {
-                            logger.debug("HHHHHHHHHHHHHHHHHHH");
-                        }
-                        catch(InterruptedException ex) {
-                            logger.debug("Time");
-                        }
-
-                    }
-                }.start();
+                Task<IOperator> task = this.getStepTask(board, artificialPlayer, nextPlayerIndex);
+                new Thread(task).start();
             }
         }
     }
 
     /**
-     * A győztes játékos indexének meghatározása.
+     * Calculates the winner player and retrieves its unique index.
      *
-     * @return "0", ha döntetlen, más esetben a játékos indexe.
+     * @return The unique index of the winner player.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -808,9 +868,9 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * A játékmenet vizsgálata és állapotának beállítása.
+     * Calculates the game status after the last step done by the specified player.
      *
-     * @param lastPlayerIndex Az utolsónak lépő játékos indexe.
+     * @param lastPlayerIndex The unique index of the specified player.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -838,7 +898,7 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Az utoljára megtett lépés hatásának kiszámítása.
+     * Calculates the effect of last step.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -866,12 +926,11 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * A játékmenet állapotától függöen a bemenetként megadott játékos indexhez
-     * képest megadja annak a játékosnak az indexét, aki léphet.
+     * Retrieves the player index of player entitled in the next round.
      *
-     * @param previousPlayerIndex Az előző játékos indexe.
+     * @param previousPlayerIndex The unique index of previous player entitled in last round.
      *
-     * @return A következő lépésre engedélyezett játékos indexe.
+     * @return A unique index.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -900,7 +959,7 @@ public class GameController extends TController implements IGameController {
                 continue;
             }
 
-            if(!this.isPossibilityToSpreadSomewhereByPlayer(nextPlayerIndex)) {
+            if(!this.IsAnyNotBlockedCell(nextPlayerIndex)) {
                 lastAttemptedIndex = nextPlayerIndex;
                 continue;
             }
@@ -911,14 +970,11 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Arra ad választ, hogya a bemenetként megadott játékos, minden ellenfele
-     * blokkolva van-e.
+     * Tells whether the opponents of the specified player are blocked.
      *
-     * @param playerIndex Annak a játékosnak az indexe, akinek az ellenfeleit
-     *                    vizsgálja a metódus.
+     * @param playerIndex Unique index of specified player.
      *
-     * @return Igaz, ha a játékos minden ellenfele blokkolva van. Hamis, az
-     *         ellenkező esetben.
+     * @return True if all opponents of the player are blocked otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -935,8 +991,8 @@ public class GameController extends TController implements IGameController {
                 byte enemyPlayerIndex = (byte) (this.getGameData().getPlayerList().indexOf(player) + 1);
 
                 if(!this.getGameData().isPlayerDefeated(enemyPlayerIndex) && (enemyPlayerIndex != playerIndex)) {
-                   logger.debug("Ball[" + playerIndex + "]: compared to " + enemyPlayerIndex);
-                    if(this.isPossibilityToSpreadSomewhereByPlayer(enemyPlayerIndex)) { //---Note: Ennek a játékosnak még van lépési lehetősége
+                    logger.debug("Ball[" + playerIndex + "]: compared to " + enemyPlayerIndex);
+                    if(this.IsAnyNotBlockedCell(enemyPlayerIndex)) { //---Note: Ennek a játékosnak még van lépési lehetősége
                         return false;
                     }
                 }
@@ -948,16 +1004,15 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Arra ad választ, hogya a bemenetként megadott játékosnak van-e lépési
-     * lehetősége még a táblán.
+     * Tells whether the specified player has any not blocked cell.
      *
-     * @param playerIndex A vizsgálandó játékos indexe.
+     * @param playerIndex Unique index of specified player.
      *
-     * @return Igaz, ha van lehetősége lépni. Hamis, az ellenkező esetben.
+     * @return True if the player has any not blocked cell otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private boolean isPossibilityToSpreadSomewhereByPlayer(byte playerIndex) throws TError {
+    private boolean IsAnyNotBlockedCell(byte playerIndex) throws TError {
         // Input checkings
         if(!this.getGameData().isPlayerExists(playerIndex)) {
             throw new TError("No player waas found at index " + playerIndex + "!");
@@ -971,7 +1026,7 @@ public class GameController extends TController implements IGameController {
                 if(stands[columnIndex][rowIndex] == playerIndex) {
 
                     // Check app steps available of the cell
-                    if(this.isPossibilityToSpreadFromThisCellByPlayer(columnIndex, rowIndex, playerIndex)) {
+                    if(this.isCellNotBlocked(columnIndex, rowIndex, playerIndex)) {
                         return true;
                     }
                     //---
@@ -983,18 +1038,17 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Annak meghatározása, hogy az adott játékosnak van-e lehetősége az adott
-     * cellából valamerre lépni.
+     * Tells whether from the specified cell the occupier can attack.
      *
-     * @param columnIndex A kiindulási cella oszlopindexe.
-     * @param rowIndex    A kiindulási cella sorindexe.
-     * @param playerIndex A lépni szándékozó játékos indexe.
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
+     * @param playerIndex Unique index of player.
      *
-     * @return Igaz, ha van legalább 1 lépési lehetőség.
+     * @return True if the occupier can attack from the cell otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private boolean isPossibilityToSpreadFromThisCellByPlayer(int columnIndex, int rowIndex, int playerIndex) throws TError {
+    private boolean isCellNotBlocked(int columnIndex, int rowIndex, int playerIndex) throws TError {
         // If the cell is inactive
         if(this.getGameData().isCellInactive(columnIndex, rowIndex)) {
             return false;
@@ -1019,13 +1073,12 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Annak ellenörzése, hogy a kiindulási cellához képest van-e olyan üres
-     * cella, ami még lépési távolságban van.
+     * Tells whether the specified cell is reachable by other occupied cells independently its occupier.
      *
-     * @param columnIndex A kiindulási cella oszlopindexe.
-     * @param rowIndex    A kiindulási cella sorindexe.
+     * @param columnIndex Column index of specified cell.
+     * @param rowIndex    Row index of specified cell.
      *
-     * @return Igaz, ha van legalább 1 üres cella.
+     * @return True if the specified cell is reachable by other occupied cells independently its occupier otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -1098,13 +1151,13 @@ public class GameController extends TController implements IGameController {
     }
 
     /**
-     * Azt vizsgálja a metódus, hogy a kooridnátákkal hivatkozott cella, aktiv-e
-     * és üres-e.
+     * Tells whether the specified cell is active and not occupied.
+     * A cell is active when it is displayed on board.
      *
-     * @param columnIndex A viszgált cella oszlopindexe.
-     * @param rowIndex    A viszgált cella sorindexe.
+     * @param columnIndex Column index of specified cell
+     * @param rowIndex    Row index of specified cell
      *
-     * @return Igaz, ha a cella üres és aktív. Hamis, az ellenkező esetben.
+     * @return True if the specified cell is active and not occupied otherwise false.
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
@@ -1132,9 +1185,9 @@ public class GameController extends TController implements IGameController {
         this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.RUNNING);
 
         // Animation
-        this.showOnAllGameBoard();      // Animation
-        this.showOnAllGameInfo();       // Animation
-
+        this.showOnAllPlayBoard();      // Animation
+        this.showOnAllInfoBoard();       // Animation
+        this.showOnAllFaceBoard();       // Animation
         //
         this.nextRound();
     }
@@ -1207,14 +1260,27 @@ public class GameController extends TController implements IGameController {
         ProcessStatusCode currentStatus = this.getGameData().getGameProcessStatus();
 
         //
-        if((currentStatus != ProcessStatusCode.PAUSED) && (currentStatus == ProcessStatusCode.RUNNING) && (currentStatus != ProcessStatusCode.STOPPED)) {
+        if((currentStatus == ProcessStatusCode.STOPPED) || (currentStatus == ProcessStatusCode.RUNNING)) {
             this.getGameData().setGameProcessStatus(IGameData.ProcessStatusCode.STOPPED);
         }
         else {
             throw new TError("At this stage the request is rejected!");
-
         }
 
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isGameRunning() {
+
+        ProcessStatusCode currentStatus = this.getGameData().getGameProcessStatus();
+
+        if(currentStatus == ProcessStatusCode.RUNNING) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1305,5 +1371,18 @@ public class GameController extends TController implements IGameController {
         }
         // Store value
         super.addView((IView) infoBoard);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void addFaceBoard(IFaceBoard faceBoard) throws TError {
+        // Input checkings
+        if(faceBoard == null) {
+            throw new TError("Property sould not be null");
+        }
+        // Store value
+        super.addView((IView) faceBoard);
+
     }
 }

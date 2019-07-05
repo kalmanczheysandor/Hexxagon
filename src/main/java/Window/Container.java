@@ -6,15 +6,19 @@ import Hexxagon.Controller.IGameController;
 import Hexxagon.Controller.IPlayer;
 import Hexxagon.Model.GameData;
 import Hexxagon.Model.GamePlay;
+import Hexxagon.Model.IGameData;
 import Hexxagon.Model.IGamePlay;
+import Hexxagon.View.IFaceBoard;
 import Hexxagon.View.IInfoBoard;
 import Hexxagon.View.IPlayBoard;
+import Support.TArray;
 import Support.TError;
 import Support.mvc.IModel;
 import Support.navigator.IPage;
 import Support.navigator.TNavigator;
 import Window.IStorage.IBoardModeItem;
 import Window.IStorage.IBoardModeItem.IPlayerRow;
+import java.util.Arrays;
 import javafx.scene.layout.Pane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +49,14 @@ public class Container extends TNavigator implements IContainer {
      * Stores unique index value for play page.
      */
     public static final int PAGE_PLAY = 2;
-
+    /**
+     * Stores unique index value for intro page.
+     */
+    public static final int PAGE_INFO = 3;
+    /**
+     * Object reference to the info page.
+     */
+    private IInfoPage infoPage;
     /**
      * Object reference to the intro page.
      */
@@ -85,7 +96,7 @@ public class Container extends TNavigator implements IContainer {
 
         //
         this.gameController = new GameController();
-        
+
         logger.trace("Container constructed!");
     }
 
@@ -116,6 +127,21 @@ public class Container extends TNavigator implements IContainer {
      * {@inheritDoc}
      */
     @Override
+    public void setInfoPage(IInfoPage page) throws TError {
+        // Input checking
+        if(page == null) {
+            throw new TError("Parameter should not be null!");
+        }
+
+        // Store value
+        this.infoPage = page;
+        this.addPage((IPage) page);                 // Add to the navigator
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setIntroPage(IIntroPage page) throws TError {
         // Input checking
         if(page == null) {
@@ -123,7 +149,7 @@ public class Container extends TNavigator implements IContainer {
         }
 
         // Store value
-        this.introPage = introPage;
+        this.introPage = page;
         this.addPage((IPage) page);                 // Add to the navigator
     }
 
@@ -138,7 +164,7 @@ public class Container extends TNavigator implements IContainer {
         }
 
         // Store value
-        this.settingsPage = settingsPage;
+        this.settingsPage = page;
         this.addPage((IPage) page);                 // Add to the navigator
 
     }
@@ -164,6 +190,14 @@ public class Container extends TNavigator implements IContainer {
      * {@inheritDoc}
      */
     @Override
+    public IInfoPage getInfoPage() {
+        return infoPage;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public IIntroPage getIntroPage() {
         return introPage;
     }
@@ -182,6 +216,14 @@ public class Container extends TNavigator implements IContainer {
     @Override
     public IPlayPage getPlayPage() {
         return playPage;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void showInfoPage() throws TError {
+        this.showAPage(PAGE_INFO);
     }
 
     /**
@@ -251,7 +293,7 @@ public class Container extends TNavigator implements IContainer {
         }
 
         // Set game field
-        byte[][] board = boardMode.getBoard();
+        byte[][] board = TArray.copy2D(boardMode.getBoard());
         gamePlay.setBoard(board);
 
         return gamePlay;
@@ -264,7 +306,9 @@ public class Container extends TNavigator implements IContainer {
     public void startGame() throws TError {
         IPlayBoard playBoard;
         IInfoBoard infoBoard;
+        IFaceBoard faceBoard;
         IPlayPage playPage;
+        IGameData gameData;
 
         // Test whether the play page is set
         if(this.getPlayPage() != null) {
@@ -274,20 +318,23 @@ public class Container extends TNavigator implements IContainer {
             throw new TError("The play page is not set yet!");
         }
 
-        // Gaining reference to the exisiting visual components
+        // Gaining references
         playBoard = playPage.getPlayBoard();
         infoBoard = playPage.getInfoBoard();
+        faceBoard = playPage.getFaceBoard();
+        gameData = this.getStorage().getGameData();
 
         // Initialisation  of the main components of game
-        GameData gameData = new GameData();
         gameData.setActualGamePlay(buildGamePlay());
 
         //
         this.gameController.setGameData(gameData);
         this.gameController.addInfoBoard(infoBoard);
         this.gameController.addPlayBoard(playBoard);
+        this.gameController.addFaceBoard(faceBoard);
 
         this.gameController.startGame();
+        this.showPlayPage();
 
     }
 
@@ -295,7 +342,8 @@ public class Container extends TNavigator implements IContainer {
      * {@inheritDoc}
      */
     @Override
-    public void stopGame() {
-
+    public void stopGame() throws TError {
+        this.gameController.stopGame();
+        this.showSettingsPage();
     }
 }

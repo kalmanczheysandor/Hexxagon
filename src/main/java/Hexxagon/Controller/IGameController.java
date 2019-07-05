@@ -1,6 +1,7 @@
 package Hexxagon.Controller;
 
 import Hexxagon.Model.IGameData;
+import Hexxagon.View.IFaceBoard;
 import Hexxagon.View.IInfoBoard;
 import Hexxagon.View.IPlayBoard;
 import Support.TError;
@@ -45,6 +46,17 @@ public interface IGameController {
      */
     public void stopGame() throws TError;
 
+    /**
+     * Tells whether the game is active.
+     * If a game is not active than no human or artificial player can invoke events.
+     * @return True if the game is running otherwise false.
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    
+    public boolean isGameRunning() throws TError;
+    
+    
+    
     /**
      * Informs the controller module about a step from a position to another one.
      * This method is used only by artificial player.
@@ -101,4 +113,16 @@ public interface IGameController {
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
     public void addInfoBoard(IInfoBoard infoBoard) throws TError;
+    
+    
+    /**
+     * Adds a face board visual component to the controller.
+     * Face board is the visual interface on which the artificial player is presented.
+     * More than one info board component is allowed to being attached to controller.
+     *
+     * @param faceBoard An object instance of class implementing {@code IFaceBoard} interface. Parameter should not be null otherwise {@code TError} is thrown.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void addFaceBoard(IFaceBoard faceBoard) throws TError;
 }

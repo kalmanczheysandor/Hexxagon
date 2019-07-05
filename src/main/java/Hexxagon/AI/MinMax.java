@@ -40,6 +40,8 @@ public final class MinMax implements IMinMax {
      */
     private static boolean isTreeCut = true;
 
+    public static int count = 0;
+
     /**
      * Creates a {@code MinMax} instance.
      */
@@ -62,11 +64,11 @@ public final class MinMax implements IMinMax {
      */
     public static IOperator takeOffer(IBoardState initialState, IHeuristicFactory heuristicFactory, int deepness, byte offeredPlayerIndex, byte enemyPlayerIndex) throws TError {
         // Input checkings
-        if(deepness < 0) {
-            throw new TError("The deepness value should be at least 0!");
+        if(deepness < 1) {
+            throw new TError("The deepness value should be at least 1!");
         }
-        if(deepness > 10) {
-            throw new TError("The deepness value should be maximum 10!");
+        if(deepness > 5) {
+            throw new TError("The deepness value should be maximum 5!");
         }
         if(initialState == null) {
             throw new TError("Property 'initialState' should not be null!");
@@ -86,8 +88,7 @@ public final class MinMax implements IMinMax {
             throw new TError("Invalid enemy  player index was given!");
         }
 
-        //
-        BranchResult result = getGoodness(initialState, heuristicFactory, deepness, offeredPlayerIndex, enemyPlayerIndex, 0);
+        BranchResult result = getGoodness(initialState, heuristicFactory, deepness, offeredPlayerIndex, enemyPlayerIndex, 0, "*", true);
         //double returnValue = result.getReturnValue();
         IOperator creatorOperator = result.getCauserOperator();
 
@@ -108,106 +109,145 @@ public final class MinMax implements IMinMax {
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private static BranchResult getGoodness(IBoardState initialState, IHeuristicFactory heuristicFactory, int deepness, byte offeredPlayerIndex, byte enemyPlayerIndex, double parentLevelValue) throws TError {
+    private static BranchResult getGoodness(IBoardState initialState, IHeuristicFactory heuristicFactory, int deepness, byte offeredPlayerIndex, byte enemyPlayerIndex, double parentLevelValue, String path, boolean isTopNode) throws TError {
         byte levelPlayerIndex = initialState.getActualPlayerIndex();       // The paler who can do a step on this level
 
-        logger.debug("------------getGoodness [" + deepness + "]-----------------------------------------------");
-        if(levelPlayerIndex != offeredPlayerIndex) { //Note: Az ellenfél lép
-            logger.debug("---------------------------ENEMY Step-----------------------------------");
+        count++;
 
-            // The initial value should be the highest possible
-            double valueMin = Double.POSITIVE_INFINITY;
-            IOperator bestOperator = null;
-
-            ////////////////////////////////////////////////////////////////////////////////
-            if(deepness > 0) {
-
-                for(IOperator operator : aggregatedOperatorOfferings(initialState, enemyPlayerIndex)) {
-
-                    if(operator.isApliciableOnState(initialState) && initialState.isOperatorInValidRange(operator)) {
-
-                        // Generate the new state 
-                        IBoardState newBoardState = operator.applyIt(initialState);
-
-                        // Determine the goodness of the new state
-                        BranchResult result = getGoodness(newBoardState, heuristicFactory, deepness - 1, offeredPlayerIndex, enemyPlayerIndex, valueMin);
-                        double returnValue = result.returnValue;
-
-                        // Tree cut
-                        if((isTreeCut) && (parentLevelValue >= returnValue)) {
-                            return new BranchResult(operator, returnValue);
-                        }
-
-                        // If the new value is worse than the recent one
-                        if(returnValue <= valueMin) {
-                            valueMin = returnValue;
-                            bestOperator = operator;
-                        }
-                    }
-                }
-            }
-            ////////////////////////////////////////////////////////////////////////////////////////////
-
-            if(deepness == 0 || bestOperator == null) {
-                IHeuristic heur = heuristicFactory.fabricateInstance(initialState, enemyPlayerIndex, offeredPlayerIndex);
-                return new BranchResult(null, heur.evaluateGoodness());
-            }
-            else if(bestOperator != null) {
-                return new BranchResult(bestOperator, valueMin);
-            }
-
+        if(levelPlayerIndex == enemyPlayerIndex) {
+            return getGoodnessWhenEnemyPlayer(initialState, heuristicFactory, deepness, offeredPlayerIndex, enemyPlayerIndex, parentLevelValue, path, isTopNode);
         }
-        else if(levelPlayerIndex == offeredPlayerIndex) { //Note: A támogatott játékos lép
-            logger.debug("------------------------OFFERED Step-----------------------------");
+        else if(levelPlayerIndex == offeredPlayerIndex) {
+            return getGoodnessWhenOfferedPlayer(initialState, heuristicFactory, deepness, offeredPlayerIndex, enemyPlayerIndex, parentLevelValue, path, isTopNode);
+        }
 
-            // The initial value should be the lowest possible
-            double valueMax = Double.NEGATIVE_INFINITY;
-            IOperator bestOperator = null;
-            ////////////////////////////////////////////////////////////////////////////////
-            if(deepness > 0) {
+        throw new TError("Unexpected execution!");
+    }
 
-                // Test operator offering
-                for(IOperator operator : aggregatedOperatorOfferings(initialState, offeredPlayerIndex)) {
-                    logger.debug("OPR:"+operator);
+    private static BranchResult getGoodnessWhenOfferedPlayer(IBoardState initialState, IHeuristicFactory heuristicFactory, int deepness, byte offeredPlayerIndex, byte enemyPlayerIndex, double parentLevelValue, String path, boolean isTopNode) throws TError {
 
-                    if(operator.isApliciableOnState(initialState) && initialState.isOperatorInValidRange(operator)) {
-                        logger.debug("Apply");
-                        // Generate the new state 
-                        IBoardState newBoardState = operator.applyIt(initialState);
+        // Input checkings
+        if(initialState.getActualPlayerIndex() != offeredPlayerIndex) {
+            throw new TError("Not equal supported player index is found!");
+        }
 
-                        // Determine the goodness of the new state
-                        BranchResult result = getGoodness(newBoardState, heuristicFactory, deepness - 1, enemyPlayerIndex, offeredPlayerIndex, valueMax);
-                        double returnValue = result.getReturnValue();
+        // The initial value should be the lowest possible
+        double valueMax = Double.NEGATIVE_INFINITY;
 
-                        // Tree cut
-                        if((isTreeCut) && (parentLevelValue <= returnValue)) {
-                            return new BranchResult(operator, returnValue);
-                        }
+        IOperator bestOperator = null;
 
-                        // If the new value is bether than the recent one
-                        if(returnValue >= valueMax) {
-                            valueMax = returnValue;
+        if(deepness > 0) {
+
+            int nodeIndex = 1;
+
+            // Test operator offering
+            for(IOperator operator : aggregatedOperatorOfferings(initialState, offeredPlayerIndex)) {
+
+                if(operator.isApliciableOnState(initialState) && initialState.isOperatorInValidRange(operator)) {
+
+                    // Generate the new state 
+                    IBoardState newBoardState = operator.applyIt(initialState);
+
+                    // Determine the goodness of the new state
+                    BranchResult result = getGoodness(newBoardState, heuristicFactory, deepness - 1, offeredPlayerIndex, enemyPlayerIndex, valueMax, path + ">" + nodeIndex, false);
+
+                    if(result != null) {
+                        double childHeur = result.getReturnValue();
+
+                        // If the new value is better than the recent one then override the previous one and store the applied operator
+                        if(childHeur >= valueMax) {
+                            valueMax = childHeur;
                             bestOperator = operator;
                         }
 
+                        // Cut
+                        if((!isTopNode) && (parentLevelValue < valueMax)) {
+                            return null;
+                        }
                     }
+
+                    nodeIndex++;
                 }
             }
-            ////////////////////////////////////////////////////////////////////////////////////////////
-            //logger.debug("if(deepness:"+deepness+"; result:"+result+")");
-            if(deepness == 0 || bestOperator == null) {
+
+            // Dermining wether it is an enstate or not
+            if(bestOperator == null) {            // If it is an endstate
                 IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
-                logger.debug("ValueByHeur<<<<<<Offer");
                 return new BranchResult(null, heur.evaluateGoodness());
             }
-            else if(bestOperator != null) {
-                logger.debug("ValueByInherit<<<<<<Offer");
+            else {                              // If it is not an endstate
+                IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
                 return new BranchResult(bestOperator, valueMax);
             }
-
-            logger.debug("UNEXPECTED");
         }
-        throw new TError("Unexpected execution!");
+        else if(deepness == 0) {
+            IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
+            return new BranchResult(null, heur.evaluateGoodness());
+        }
+
+        throw new TError("Unexpecded execution!");
+    }
+
+    private static BranchResult getGoodnessWhenEnemyPlayer(IBoardState initialState, IHeuristicFactory heuristicFactory, int deepness, byte offeredPlayerIndex, byte enemyPlayerIndex, double parentLevelValue, String path, boolean isTopNode) throws TError {
+
+        // Input checkings
+        if(initialState.getActualPlayerIndex() != enemyPlayerIndex) {
+            throw new TError("Not equal enemy player index is found!");
+        }
+
+        // The initial value should be the highest possible
+        double valueMin = Double.POSITIVE_INFINITY;
+        IOperator bestOperator = null;
+
+        if(deepness > 0) {
+
+            int nodeIndex = 1;
+            for(IOperator operator : aggregatedOperatorOfferings(initialState, enemyPlayerIndex)) {
+
+                if(operator.isApliciableOnState(initialState) && initialState.isOperatorInValidRange(operator)) {
+
+                    // Generate the new state 
+                    IBoardState newBoardState = operator.applyIt(initialState);
+
+                    // Determine the goodness of the new state
+                    BranchResult result = getGoodness(newBoardState, heuristicFactory, deepness - 1, offeredPlayerIndex, enemyPlayerIndex, valueMin, path + ">" + nodeIndex, false);
+
+                    if(result != null) {
+                        double childHeur = result.getReturnValue();
+
+                        // If the new value is worse than the recent one
+                        if(childHeur < valueMin) {
+                            valueMin = childHeur;
+                            bestOperator = operator;
+                        }
+
+                        // Cut
+                        if((!isTopNode) && (parentLevelValue > valueMin)) {
+                            return null;
+                        }
+                    }
+
+                    nodeIndex++;
+                }
+            }
+
+            // Dermining wether it is an enstate or not
+            if(bestOperator == null) {            // If it is an endstate
+                IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
+
+                return new BranchResult(null, heur.evaluateGoodness());
+            }
+            else {                              // If it is not an endstate
+                IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
+                return new BranchResult(bestOperator, valueMin);
+            }
+        }
+        else if(deepness == 0) {
+            IHeuristic heur = heuristicFactory.fabricateInstance(initialState, offeredPlayerIndex, enemyPlayerIndex);
+            return new BranchResult(null, heur.evaluateGoodness());
+        }
+
+        throw new TError("Unexpecded execution!");
     }
 
     /**
@@ -222,7 +262,7 @@ public final class MinMax implements IMinMax {
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private static ArrayList<IOperator> aggregatedOperatorOfferings(IBoardState boardState, byte offeredPlayerIndex) throws TError {
+    public static ArrayList<IOperator> aggregatedOperatorOfferings(IBoardState boardState, byte offeredPlayerIndex) throws TError {
         // Input checkings
         if(boardState == null) {
             throw new TError("Parameter should not be null!");
@@ -238,6 +278,7 @@ public final class MinMax implements IMinMax {
         operatorOffering.addAll(ImpossibleOperator.generateAvailableOperatorsOnState(boardState, offeredPlayerIndex));
 
         return operatorOffering;
+
     }
 
     /**

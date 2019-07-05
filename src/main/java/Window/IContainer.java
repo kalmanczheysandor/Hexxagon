@@ -27,6 +27,21 @@ public interface IContainer {
      */
     public IStorage getStorage();
 
+    
+    
+    
+    /**
+     * Attaches the info page view component to the controller.
+     *
+     * @param page An instance of class implementing the {@code IInfoPage} interface.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void setInfoPage(IInfoPage page) throws TError;
+    
+    
+    
+    
     /**
      * Attaches the intro page view component to the controller.
      *
@@ -54,6 +69,15 @@ public interface IContainer {
      */
     public void setPlayPage(IPlayPage page) throws TError;
 
+    
+    
+    /**
+     * Retrieves the attached object of info page component.
+     *
+     * @return Reference to the page component implementing the {@code IInfoPage} interface.
+     */
+    public IInfoPage getInfoPage();
+    
     /**
      * Retrieves the attached object of intro page component.
      *
@@ -75,6 +99,15 @@ public interface IContainer {
      */
     public IPlayPage getPlayPage();
 
+    
+    
+    /**
+     * Appoints the info page to be the active page and displays it.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public void showInfoPage() throws TError;
+    
     /**
      * Appoints the intro page to be the active page and displays it.
      *
@@ -123,7 +156,9 @@ public interface IContainer {
 
     /**
      * Stops the Hexxagon module.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    public void stopGame();
+    public void stopGame() throws TError;
 
 }

@@ -1,5 +1,6 @@
 package Window;
 
+import Hexxagon.View.FaceBoard;
 import Hexxagon.View.IInfoBoard;
 import Hexxagon.View.IPlayBoard;
 import Hexxagon.View.InfoBoard;
@@ -11,6 +12,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import Hexxagon.View.IFaceBoard;
 
 /**
  * Object instance of this class is responsible for the initialisation and draw of graphical component displayed on play page.
@@ -36,11 +38,16 @@ public class PlayPage extends JFXPage implements IPlayPage {
      * Object of info board graphical component of Hexxagon module.
      */
     private IInfoBoard infoBoard;
-
+    
+     /**
+     * Object of faceBoard graphical component of Hexxagon module.
+     */
+    private IFaceBoard faceBoard;
+    
     /**
      * Graphical node on which placed the graphical components of Hexxahon module.
      */
-    private Pane gameNode;
+    private AnchorPane gameNode;
     /**
      * Object of back button graphical component.
      */
@@ -59,47 +66,75 @@ public class PlayPage extends JFXPage implements IPlayPage {
      * {@inheritDoc}
      */
     @Override
-    protected void initComponent() {
+    protected void initComponent() throws TError{
 
         // Inatialise a component
         this.backButton = new Button("Back");
         this.backButton.setOnMouseClicked((event) -> {
 
             try {
-                this.getContainer().showSettingsPage();
+                this.getContainer().stopGame();
             }
             catch(TError ex) {
                  logger.error(ex.toString());
             }
-
+            catch(Exception ex) {
+                 logger.error(ex.toString());
+            }
         });
 
         // The graphical root for hexagon boards
-        this.gameNode = new Pane();
+        this.gameNode = new AnchorPane();
+        
+        Pane playBoardNode= new Pane();
+        Pane infoBoardNode= new Pane();
+        Pane faceBoardNode= new Pane();
 
         // Inatialise a component
-        playBoard = new PlayBoard(gameNode);
+        playBoard = new PlayBoard(playBoardNode);
 
         // Inatialise a component
-        infoBoard = new InfoBoard(gameNode);
-
+        infoBoard = new InfoBoard(infoBoardNode);
+        
+        // Inatialise a component
+        faceBoard = new FaceBoard(faceBoardNode);
+        
+        
+        
+        this.gameNode.getChildren().add(faceBoardNode);
+        this.gameNode.setRightAnchor(faceBoardNode, Double.valueOf(-20));
+        this.gameNode.setTopAnchor(faceBoardNode, Double.valueOf(-20));
+      
+        this.gameNode.getChildren().add(playBoardNode);
+        this.gameNode.setTopAnchor(playBoardNode, Double.valueOf(0));
+        this.gameNode.setTopAnchor(playBoardNode, Double.valueOf(0));
+        this.gameNode.getChildren().add(infoBoardNode);
+            
+            
+       
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Object drawContent() {
+    protected Object drawContent() throws TError{
 
         AnchorPane root = new AnchorPane();
+       
         root.getChildren().add(this.backButton);
         root.getChildren().add(this.gameNode);
+        
+        AnchorPane.setLeftAnchor(this.gameNode, Double.valueOf(0));
+        AnchorPane.setRightAnchor(this.gameNode, Double.valueOf(0));
+        AnchorPane.setTopAnchor(this.gameNode, Double.valueOf(0));
+        AnchorPane.setBottomAnchor(this.gameNode, Double.valueOf(40));
+        
         AnchorPane.setLeftAnchor(this.backButton, Double.valueOf(20));
         AnchorPane.setBottomAnchor(this.backButton, Double.valueOf(20));
 
         // Set css style
         root.setId("RootNode");
-        // root.getStylesheets().add(PlayPage.class.getResource(IPlayPage.folderCSS+"/PlayPage.css").toExternalForm());
         return root;
     }
 
@@ -127,6 +162,16 @@ public class PlayPage extends JFXPage implements IPlayPage {
         return infoBoard;
     }
 
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IFaceBoard getFaceBoard() {
+        return faceBoard;
+    }
+    
+    
     /**
      * {@inheritDoc}
      */

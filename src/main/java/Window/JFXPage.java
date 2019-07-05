@@ -1,5 +1,6 @@
 package Window;
 
+import Support.TError;
 import Support.navigator.TPage;
 import javafx.animation.FadeTransition;
 import javafx.animation.FadeTransitionBuilder;
@@ -80,4 +81,6 @@ public abstract class JFXPage extends TPage {
         scaleTransition.play();
 
     }
+
+   
 }

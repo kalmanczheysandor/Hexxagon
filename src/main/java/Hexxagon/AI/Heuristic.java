@@ -53,7 +53,7 @@ public final class Heuristic implements IHeuristic {
      *
      * @throws TError Thrown if an unrecoverable error was occurred.
      */
-    private Heuristic(IBoardState boardState, byte offeredPlayerIndex, byte enemyPlayerIndex) throws TError {
+    public Heuristic(IBoardState boardState, byte offeredPlayerIndex, byte enemyPlayerIndex) throws TError {
         // Input checkings
         if(boardState == null) {
             throw new TError("Parameter should not be null!");
@@ -73,7 +73,8 @@ public final class Heuristic implements IHeuristic {
      * {@inheritDoc}
      */
     @Override
-    public double evaluateGoodness() throws TError {
+    /*public double evaluateGoodness() throws TError {
+        
         // Property checkings
         if(this.boardState == null) {
             throw new TError("Property value is not set");
@@ -135,6 +136,133 @@ public final class Heuristic implements IHeuristic {
         logger.debug("HEUR:" + output);
         return output;
 
+    }
+     */
+
+    
+     public double evaluateGoodness() throws TError {
+
+        // Property checkings
+        if(this.boardState == null) {
+            throw new TError("Property value is not set");
+        }
+
+        // 
+       
+
+        int offeredPlayer_BallCount = boardState.getPlayerBallCount(offeredPlayerIndex);
+        int offeredPlayer_attackableBallCount = this.getPlayerAttackableBallCount(offeredPlayerIndex);  // ennyivel tud lépni
+        int offeredPlayer_blockedBallCount = offeredPlayer_BallCount - offeredPlayer_attackableBallCount;
+        int offeredPlayer_protectedBallCount = getProtectedEmptyCellsCount(offeredPlayerIndex);
+        
+        
+        int enemyPlayer_BallCount = boardState.getPlayerBallCount(enemyPlayerIndex);
+        int enemyPlayer_attackableBallCount = this.getPlayerAttackableBallCount(enemyPlayerIndex);
+        int enemyPlayer_blockedBallCount = enemyPlayer_BallCount - enemyPlayer_attackableBallCount;
+        int enemyPlayer_protectedBallCount = getProtectedEmptyCellsCount(enemyPlayerIndex);
+        
+         int emptyCellCount = boardState.getEmptyCellCount();
+         int allCellCount=emptyCellCount+offeredPlayer_BallCount+enemyPlayer_BallCount;
+        
+        
+        
+        
+        if(isEndState()) {
+            if(offeredPlayer_BallCount < (enemyPlayer_BallCount + emptyCellCount)) { // When endstate and offered player will louse it
+                return Double.NEGATIVE_INFINITY;
+            }
+            else if(offeredPlayer_BallCount == (enemyPlayer_BallCount + emptyCellCount)) {  // When endstate and offered player will louse and will not win because iti is a draw play
+                
+                return Double.NEGATIVE_INFINITY + 1;
+            }
+            else if(offeredPlayer_BallCount > (enemyPlayer_BallCount + emptyCellCount)) {  // When endstate and offered player will win
+                return Double.POSITIVE_INFINITY;
+            }
+            else {
+                throw new TError("Unexpected execution!");
+            }
+        }
+        else {
+            
+            double output = (offeredPlayer_BallCount+offeredPlayer_protectedBallCount) - (enemyPlayer_BallCount+enemyPlayer_protectedBallCount);
+            //double output = (offeredPlayer_blockedBallCount - enemyPlayer_blockedBallCount);
+            logger.debug("offeredPlayer_BallCount:" + offeredPlayer_BallCount);
+            logger.debug("enemyPlayer_BallCount:" + enemyPlayer_BallCount);
+            logger.debug("HEUR:" + output);
+            return output;
+        }
+
+        
+
+    }
+    
+    
+//    public double evaluateGoodness2() throws TError {
+//
+//        // Property checkings
+//        if(this.boardState == null) {
+//            throw new TError("Property value is not set");
+//        }
+//
+//        // 
+//       
+//
+//        int offeredPlayer_BallCount = boardState.getPlayerBallCount(offeredPlayerIndex);
+//        int offeredPlayer_attackableBallCount = this.getPlayerAttackableBallCount(offeredPlayerIndex);  // ennyivel tud lépni
+//        int offeredPlayer_blockedBallCount = offeredPlayer_BallCount - offeredPlayer_attackableBallCount;
+//
+//        int enemyPlayer_BallCount = boardState.getPlayerBallCount(enemyPlayerIndex);
+//        int enemyPlayer_attackableBallCount = this.getPlayerAttackableBallCount(enemyPlayerIndex);
+//        int enemyPlayer_blockedBallCount = enemyPlayer_BallCount - enemyPlayer_attackableBallCount;
+//
+//         int emptyCellCount = boardState.getEmptyCellCount();
+//         int allCellCount=emptyCellCount+offeredPlayer_BallCount+enemyPlayer_BallCount;
+//        
+//        
+//        
+//        
+//        if(isEndState()) {
+//            if(offeredPlayer_BallCount < (enemyPlayer_BallCount + emptyCellCount)) { // When endstate and offered player will louse ir
+//                return Double.NEGATIVE_INFINITY;
+//            }
+//            else if(offeredPlayer_BallCount == (enemyPlayer_BallCount + emptyCellCount)) {  // When endstate and offered player will louse and will not win because iti is a draw play
+//                
+//                return Double.NEGATIVE_INFINITY + 1;
+//            }
+//            else if(offeredPlayer_BallCount > (enemyPlayer_BallCount + emptyCellCount)) {  // When endstate and offered player will win
+//                return Double.POSITIVE_INFINITY;
+//            }
+//            else {
+//                throw new TError("Unexpected execution!");
+//            }
+//        }
+//        else {
+//            
+//            double diff = (offeredPlayer_BallCount - enemyPlayer_BallCount);
+//            double output   = (diff/emptyCellCount)*1000;
+//            logger.debug("offeredPlayer_BallCount:" + offeredPlayer_BallCount);
+//            logger.debug("enemyPlayer_BallCount:" + enemyPlayer_BallCount);
+//            logger.debug("HEUR:" + output);
+//            return output;
+//        }
+//
+//        
+//
+//    }
+
+    private boolean isEndState() throws TError {
+
+        if(boardState.getEmptyCellCount() == 0) { // when no free cell is on board
+            return true;
+        }
+        else if(boardState.getPlayerBallCount(offeredPlayerIndex) == 0) {// When no ball remained of offered player
+            return true;
+        }
+        else if(this.getPlayerAttackableBallCount(offeredPlayerIndex) == 0) { // When all balls of offered player are blocked
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -199,6 +327,54 @@ public final class Heuristic implements IHeuristic {
         return false;
     }
 
+    
+    private boolean isEnemyCellFoundInAttackRange(int centerColumnIndex, int centerRowIndex,byte enemyIndex) throws TError {
+        // Input checking 
+        if(!this.boardState.isCellExists(centerColumnIndex, centerRowIndex)) {
+            throw new TError("The coordinates [" + centerColumnIndex + "," + centerRowIndex + "] are out of range!");
+        }
+
+        // Check all possible attack point from source position
+        for(TCoordinate2D relativeCoordinate : relativeCoordinatesOfAttackZone) {
+            int attackColumnIndex = centerColumnIndex + relativeCoordinate.getX();
+            int attackRowIndex = centerRowIndex + relativeCoordinate.getY();
+
+            if(this.boardState.isCellExists(attackColumnIndex, attackRowIndex)) {
+                if(this.boardState.getCellValue(attackColumnIndex, attackRowIndex)==enemyIndex){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+    
+    
+    private int getProtectedEmptyCellsCount(byte playerIndex) throws TError {
+        // Input checkings
+        if(playerIndex != this.offeredPlayerIndex && playerIndex != this.enemyPlayerIndex) {
+            throw new TError("Ivalid player index was given! It was:" + playerIndex);
+        }
+
+        // Determine result
+        byte[][] board = this.boardState.getBoard();
+        int count = 0;
+        for(int columnIndex = 0; columnIndex < board.length; columnIndex++) {
+            for(int rowIndex = 0; rowIndex < board[columnIndex].length; rowIndex++) {
+
+                if(board[columnIndex][rowIndex] == 0) {
+                    if(!this.isEmptyCellFoundInAttackRange(columnIndex, rowIndex)) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+    
+    
+    
+    
     /**
      * The factory class of heuristic class.
      *

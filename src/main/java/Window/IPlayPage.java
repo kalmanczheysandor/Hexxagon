@@ -2,6 +2,7 @@ package Window;
 
 import Hexxagon.View.IInfoBoard;
 import Hexxagon.View.IPlayBoard;
+import Hexxagon.View.IFaceBoard;
 
 /**
  * Contains method specifications of play page of application.
@@ -24,4 +25,10 @@ public interface IPlayPage {
      */
     public IInfoBoard getInfoBoard();
 
+     /**
+     * Retrieves the so called face graphical component of Hexxagon module.
+     * @return Reference to the object of component node.
+     */
+     public IFaceBoard getFaceBoard();
+    
 }

@@ -34,11 +34,12 @@ public class TError extends Exception {
      */
     @Override
     public String toString() {
-        StringWriter sw = new StringWriter();
+        /*StringWriter sw = new StringWriter();
         this.printStackTrace(new PrintWriter(sw));
         String exceptionAsString = sw.toString();
 
-        return "TError{"+sw.toString()+'}';
+        return "TError{"+sw.toString()+'}';*/
+        return "TError{"+this.getMessage()+"}";
     }
 
 }

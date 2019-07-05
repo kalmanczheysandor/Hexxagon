@@ -1,12 +1,22 @@
 package Window;
 
+import Hexxagon.View.PlayBoard;
+import Main.Main;
 import Support.TError;
 import java.beans.PropertyChangeEvent;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.scene.control.Button;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
+import javafx.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,12 +43,16 @@ public class IntroPage extends JFXPage implements IIntroPage {
     /**
      * Object of exit button graphical component.
      */
-    private Button exitButton;
+    private Button infoButton;
 
     /**
      * Object of text graphical component.
      */
     private Text headLine;
+
+    private static final Image iconBulbBottom = new Image(IntroPage.class.getResourceAsStream(Main.folderImage + "/bigbulb_bottom.gif"));
+    private static final Image iconBulbTop = new Image(IntroPage.class.getResourceAsStream(Main.folderImage + "/bigbulb_top.gif"));
+    private static final Image iconTitle = new Image(IntroPage.class.getResourceAsStream(Main.folderImage + "/title.gif"));
 
     /**
      * Creates a {@code IntroPage} instance.
@@ -53,21 +67,30 @@ public class IntroPage extends JFXPage implements IIntroPage {
      * {@inheritDoc}
      */
     @Override
-    protected void initComponent() {
-        IntroPage page = this;
+    protected void initComponent() throws TError {
+       
+       // Component initialisation
+        this.infoButton = new Button("Info");
+        this.infoButton.setOnMouseClicked((event) -> {
 
-        //
-        this.exitButton = new Button("Exit");
+            try {
+                this.getContainer().showInfoPage();
+            }
+            catch(TError ex) {
+                logger.error(ex.toString());
+            }
 
-        //
+        });
+
+       // Component initialisation
         this.towardsButton = new Button("Next");
         this.towardsButton.setOnMouseClicked((event) -> {
 
             try {
-                page.getContainer().showSettingsPage();
+                this.getContainer().showSettingsPage();
             }
             catch(TError ex) {
-                 logger.error(ex.toString());
+                logger.error(ex.toString());
             }
 
         });
@@ -78,45 +101,86 @@ public class IntroPage extends JFXPage implements IIntroPage {
      * {@inheritDoc}
      */
     @Override
-    protected Object drawContent() {
+    protected Object drawContent() throws TError {
 
         //
         AnchorPane root = new AnchorPane();
         root.setId("RootNode");
 
-        //
+        // Attaching components
+        root.getChildren().add(this.infoButton);
         root.getChildren().add(this.towardsButton);
+
+        // Anchoring info button
+        AnchorPane.setLeftAnchor(this.infoButton, Double.valueOf(20));
+        AnchorPane.setBottomAnchor(this.infoButton, Double.valueOf(20));
+
+        // Anchoring towards button
         AnchorPane.setRightAnchor(this.towardsButton, Double.valueOf(20));
         AnchorPane.setBottomAnchor(this.towardsButton, Double.valueOf(20));
 
-        Text authorText = new Text(50, 10, ""
+        // TITLE
+        ImageView imageTitle = new ImageView(iconTitle);
+        imageTitle.setScaleX(0.85);
+        imageTitle.setScaleY(0.85);
+        root.getChildren().add(imageTitle);
+        AnchorPane.setTopAnchor(imageTitle, Double.valueOf(200));
+        AnchorPane.setLeftAnchor(imageTitle, Double.valueOf(-30));
+
+        // VERSION NUMBER
+        Text versionText = new Text(50, 50, "ARE YOU CLEVER ENOUGH?");
+        versionText.setId("Text");
+        root.getChildren().add(versionText);
+        AnchorPane.setBottomAnchor(versionText, Double.valueOf(200));
+        AnchorPane.setLeftAnchor(versionText, Double.valueOf(300));
+
+        // BULB
+        DropShadow boubleLight = new DropShadow();
+        boubleLight.setRadius(5);
+        boubleLight.setColor(Color.YELLOW);
+
+        Pane bulbNode = new Pane();
+
+        ImageView imageBulbTop = new ImageView(iconBulbTop);
+        imageBulbTop.setEffect(boubleLight);
+        imageBulbTop.setLayoutY(0);
+        imageBulbTop.setLayoutX(0);
+
+        ImageView imageBulbBottom = new ImageView(iconBulbBottom);
+        imageBulbBottom.setLayoutY(128);
+        imageBulbBottom.setLayoutX(29);
+
+        bulbNode.getChildren().add(imageBulbTop);
+        bulbNode.getChildren().add(imageBulbBottom);
+        bulbNode.setScaleX(0.7);
+        bulbNode.setScaleY(0.7);
+
+        root.getChildren().add(bulbNode);
+        root.setLeftAnchor(bulbNode, Double.valueOf(630));
+        root.setTopAnchor(bulbNode, Double.valueOf(185));
+
+        Timeline animation = new Timeline();
+        animation.setCycleCount(Timeline.INDEFINITE);
+        animation.setAutoReverse(true);
+        animation.getKeyFrames().setAll(
+                new KeyFrame(Duration.ZERO, new KeyValue(boubleLight.radiusProperty(), 10)),
+                new KeyFrame(Duration.millis(1000), new KeyValue(boubleLight.radiusProperty(), 70))
+        );
+        animation.play();
+
+        // AUTHOR
+        Text authorText = new Text(0, 0, ""
                 + "Author: Sandor Kalmanchey, Pti Bsc. \n"
                 + "E-mail: kalmanczheysandor@gmail.com\n"
                 + "Neptun: Z2J914");
         authorText.setId("Text");
-        root.getChildren().add(authorText);
-        AnchorPane.setRightAnchor(authorText, Double.valueOf(100));
-        AnchorPane.setBottomAnchor(authorText, Double.valueOf(20));
+        authorText.setTextAlignment(TextAlignment.LEFT);
+        //root.getChildren().add(authorText);
+        AnchorPane.setRightAnchor(authorText, Double.valueOf(200));
+        AnchorPane.setBottomAnchor(authorText, Double.valueOf(15));
 
-        //
-        this.headLine = new Text(20, 120, "HEXXAGON");
-        headLine.setId("HeadLine");
-        DropShadow dropShadow = new DropShadow();
-        dropShadow.setRadius(10);
-        dropShadow.setColor(Color.WHITE);
-        headLine.setEffect(dropShadow);
-        root.getChildren().add(headLine);
-        AnchorPane.setTopAnchor(headLine, Double.valueOf(20));
-        AnchorPane.setLeftAnchor(headLine, Double.valueOf(50));
-
-        Text versionText = new Text(50, 50, "2.0");
-        versionText.setId("Text");
-        root.getChildren().add(versionText);
-        AnchorPane.setTopAnchor(versionText, Double.valueOf(200));
-        AnchorPane.setLeftAnchor(versionText, Double.valueOf(720));
-
-        //
-        Text storyBlock = new Text(300, 200, ""
+        // NOTE
+        Text storyBlock = new Text(0, 0, ""
                 + "This application has been made as accomplishment for exam requirements in the following subjects:\n"
                 + "- ILDV444 Mesterséges intelligencia alkalmazások \n"
                 + "- ILDK311 Programozási környezetek\n"
@@ -124,9 +188,9 @@ public class IntroPage extends JFXPage implements IIntroPage {
                 + "After the first release in 2015 the application has been redesigned in 2019.\n");
 
         storyBlock.setId("Text");
-        root.getChildren().add(storyBlock);
-        AnchorPane.setTopAnchor(storyBlock, Double.valueOf(300));
-        AnchorPane.setLeftAnchor(storyBlock, Double.valueOf(300));
+        //root.getChildren().add(storyBlock);
+        AnchorPane.setLeftAnchor(storyBlock, Double.valueOf(10));
+        AnchorPane.setBottomAnchor(storyBlock, Double.valueOf(0));
 
         return root;
     }

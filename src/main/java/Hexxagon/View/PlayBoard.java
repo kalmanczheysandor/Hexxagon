@@ -2,12 +2,10 @@ package Hexxagon.View;
 
 import Hexxagon.Controller.IGameController;
 import Hexxagon.Model.GameData;
-import Hexxagon.Model.IGamePlay;
 import Support.TError;
 import Support.mvc.TView;
 import java.beans.PropertyChangeEvent;
 import java.util.ArrayList;
-
 
 import javafx.animation.ScaleTransition;
 import javafx.animation.ScaleTransitionBuilder;
@@ -29,14 +27,15 @@ import javafx.scene.layout.Pane;
 import Hexxagon.Controller.IPlayer;
 import Hexxagon.Model.IField;
 import Hexxagon.Model.IGameData;
-import javafx.scene.Group;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.media.AudioClip;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,21 +68,36 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     private ArrayList<BoardPit> pitList = new ArrayList<BoardPit>();
 
+    /**
+     * Relative path of folder of css files.
+     */
+    private static final String folderCSS = "/css";
+    /**
+     * Relative path of folder of image files.
+     */
+    private static final String folderImage = "/image";
+    /**
+     * Relative path of folder of audio files.
+     */
+    private static final String folderAudio = "/audio";
+
     //String SoundDirectoryPath = "F:/Sound";
-    // private AudioClip VoiceNotAllowedPlayerSelected = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound01.wav").toExternalForm());
-    //private AudioClip VoiceOutside = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound01.wav").toExternalForm());
-    //private AudioClip VoiceSpreadWithJump = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound02.wav").toExternalForm());
-    //private AudioClip VoiceSpreadWithNoJump = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound03.wav").toExternalForm());
-    //private AudioClip VoiceCapture = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound04.wav").toExternalForm());
-    //private AudioClip VoiceShowSpreadArea = new AudioClip(PlayBoard.class.getResource(SoundDirectoryPath + "/Sound05.wav").toExternalForm());
+    private static AudioClip voiceNotAllowedPlayerSelected = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/reject.wav").toExternalForm());
+    private static AudioClip voiceOutside = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/reject.wav").toExternalForm());
+    private static AudioClip voiceSpreadWithJump = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/step.wav").toExternalForm());
+    private static AudioClip voiceSpreadWithNoJump = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/jump.wav").toExternalForm());
+    private static AudioClip voiceCapture = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/occupy.wav").toExternalForm());
+    private static AudioClip voiceShowSpreadArea = new AudioClip(PlayBoard.class.getResource(PlayBoard.folderAudio + "/click.wav").toExternalForm());
     private Pane rootNode = new Pane();
+
+    private Alert endGameDialog = new Alert(Alert.AlertType.NONE, "", ButtonType.OK);
 
     /**
      * Creates a {@code PlayBoard} instance.
      *
      * @param root JavaFX graphical node to where this graphical component would be attached.
      */
-    public PlayBoard(Pane root) {
+    public PlayBoard(Pane root) throws TError {
         super(root);
         logger.trace("PlayBoard constructed!");
         initialisation();
@@ -92,10 +106,8 @@ public class PlayBoard extends TView implements IPlayBoard {
     /**
      * Where sub component initialisation might happens.
      */
-    private void initialisation() {
+    private void initialisation() throws TError {
 
-        // Adding to UI root node
-        // this.getRoot().getChildren().add(button01);
     }
 
     /**
@@ -103,21 +115,21 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public void show() throws TError {
-        // If info board not created and not attached to the outside nodes
-        if(!this.getUIRoot().getChildren().contains(this.rootNode)) {
-            this.createBoard();
-            this.getUIRoot().getChildren().add(this.rootNode);
-        }
-
+        // Generate board if not exists
+        this.createBoard();
+        
         // Do animation on all pit when the board becomes visible
         byte[][] stands = this.getDataInstance().getCells();
         for(int columnIndex = 0; columnIndex < stands.length; columnIndex++) {
             for(int rowIndex = 0; rowIndex < stands[columnIndex].length; rowIndex++) {
                 if(stands[columnIndex][rowIndex] != -1) {
+                    if(this.isPitExists(columnIndex, rowIndex)) {
                     this.getPit(columnIndex, rowIndex).animateForStart();
+                    }
                 }
             }
         }
+        
     }
 
     /**
@@ -133,16 +145,19 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public void refresh() throws TError {
-        //
+
+        
+        // Generate board if not exists
         this.createBoard();
 
         //
-        for(int columnIndex = 0; columnIndex <= IGamePlay.maximumExpectedStandColumnIndex; columnIndex++) {
-
-            for(int rowIndex = 0; rowIndex <= IGamePlay.maximumExpectedStandRowIndex; rowIndex++) {
-
-                BoardPit pit = this.getPit(columnIndex, rowIndex);
-                pit.checkState();
+        byte[][] stands = this.getDataInstance().getCells();
+        for(int columnIndex = 0; columnIndex < stands.length; columnIndex++) {
+            for(int rowIndex = 0; rowIndex < stands[columnIndex].length; rowIndex++) {
+                if(isPitExists(columnIndex, rowIndex)) {
+                    BoardPit pit = this.getPit(columnIndex, rowIndex);
+                    pit.checkState();
+                }
             }
         }
     }
@@ -154,47 +169,80 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     private final void createBoard() throws TError {
 
-        //
+        if(this.getUIRoot().getChildren().contains(this.rootNode)) {
+            this.getUIRoot().getChildren().remove(this.rootNode);
+        }
+
+        Pane root = new Pane();
+        this.rootNode = null;
+        pitList.clear();
+
         byte[][] stands = this.getDataInstance().getCells();
 
-        //
         for(int columnIndex = 0; columnIndex < stands.length; columnIndex++) { //Columns
 
-            // CreateAColumn
-            int posX = 10 + ((columnIndex + 1) * 50);
+            int posX = -50 + ((columnIndex) * 44);
             int posY = 250 - ((columnIndex + 1) * 22);
 
-            for(int rowIndex = 0; rowIndex < stands[columnIndex].length; rowIndex++) { //Az adott oszlop sorai(minden sorban pontosan 1db cella)
+            for(int rowIndex = 0; rowIndex < stands[columnIndex].length; rowIndex++) {
 
-                //
-                BoardPit pit;
-                if(this.isPitExists(columnIndex, rowIndex)) {
-                    pit = this.getPit(columnIndex, rowIndex);
+                if(stands[columnIndex][rowIndex] >= 0) {
+                    BoardPit pit = new BoardPit(this, posX + (rowIndex) * 44, posY + (rowIndex) * 22, columnIndex, rowIndex);
+                    pitList.add(pit);
+                    root.getChildren().add(pit);
+                    pit.checkState();
                 }
-                else {
-                    pit = new BoardPit(this, posX + (rowIndex + 1) * 49, posY + (rowIndex + 1) * 23, columnIndex, rowIndex);
-                    this.pitList.add(pit);
-                }
+            }
+        }
+        this.rootNode = root;
 
-                //
-                if(stands[columnIndex][rowIndex] != -1) {
-                    if(!this.rootNode.getChildren().contains(pit)) {
-                        this.addToRootNode(pit);
+        this.getUIRoot().getChildren().add(root);
+
+        /*if(!this.getUIRoot().getChildren().contains(this.rootNode)) {
+            //
+            byte[][] stands = this.getDataInstance().getCells();
+
+            //
+            for(int columnIndex = 0; columnIndex < stands.length; columnIndex++) { //Columns
+
+                // CreateAColumn
+                int posX = -50 + ((columnIndex ) * 50);
+                int posY = 250 - ((columnIndex + 1) * 22);
+
+                for(int rowIndex = 0; rowIndex < stands[columnIndex].length; rowIndex++) { //Az adott oszlop sorai(minden sorban pontosan 1db cella)
+
+                    //
+                    BoardPit pit;
+                    if(this.isPitExists(columnIndex, rowIndex)) {
+                        pit = this.getPit(columnIndex, rowIndex);
                     }
-                }
-                else {
-                    if(this.rootNode.getChildren().contains(pit)) {
-                        this.rootNode.getChildren().remove(pit);
-
+                    else {
+                        pit = new BoardPit(this, posX + (rowIndex) * 49, posY + (rowIndex) * 23, columnIndex, rowIndex);
+                        this.pitList.add(pit);
                     }
+
+                    //
+                    if(stands[columnIndex][rowIndex] != -1) {
+                        if(!this.rootNode.getChildren().contains(pit)) {
+                            this.addToRootNode(pit);
+                        }
+                    }
+                    else {
+                        if(this.rootNode.getChildren().contains(pit)) {
+                            this.rootNode.getChildren().remove(pit);
+
+                        }
+                    }
+                    //
+                    pit.checkState();
+
                 }
-                //
-                pit.checkState();
 
             }
 
-        }
-
+            //
+            this.getUIRoot().getChildren().add(this.rootNode);
+        }*/
     }
 
     /**
@@ -263,13 +311,20 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public void modelPropertyChange(PropertyChangeEvent evt) {
-        if(evt.getPropertyName().equals(GameData.MODIFICATIONCODE_ACTUALGAMEPLAY)) {
-            //String newStringValue = evt.getNewValue().toString();
-            //xPositionTextField.setText(newStringValue);
+        try {
 
+            if(evt.getPropertyName().equals(GameData.MODIFICATIONCODE_ACTUALGAMEPLAY)) {
+                //String newStringValue = evt.getNewValue().toString();
+                //xPositionTextField.setText(newStringValue);
+                
+                this.refresh();
+            }
+            else {
+                logger.warn("Unexpected property change:" + evt.getPropertyName());
+            }
         }
-        else {
-            logger.warn("Unexpected property change:" + evt.getPropertyName());
+        catch(TError exp) {
+            logger.error(exp.toString());
         }
 
     }
@@ -306,7 +361,7 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public final void animateWhenNotAllowedPlayerClickedOnAPit(int columnIndex, int rowIndex) {
-        //VoiceNotAllowedPlayerSelected.play();
+        voiceNotAllowedPlayerSelected.play();
     }
 
     /**
@@ -314,7 +369,7 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public final void animateWhenClickedOutsideOfAttackZone(int columnIndex, int rowIndex) {
-        //VoiceOutside.play();
+        voiceOutside.play();
     }
 
     /**
@@ -330,7 +385,7 @@ public class PlayBoard extends TView implements IPlayBoard {
             throw new TError("The requested pit[" + baseColumnIndex + "," + baseRowIndex + "] is not found!");
         }
 
-        //VoiceShowSpreadArea.play();
+        voiceShowSpreadArea.play();
         // Remove possible recent animation
         this.removeAllAttackZone();
 
@@ -394,7 +449,7 @@ public class PlayBoard extends TView implements IPlayBoard {
         BoardPit pit = this.getPit(columnIndex, rowIndex);
         if(pit != null) {
             pit.animateForCapture();
-            //this.VoiceSpreadWithJump.play();
+            voiceSpreadWithJump.play();
 
         }
     }
@@ -407,7 +462,7 @@ public class PlayBoard extends TView implements IPlayBoard {
         BoardPit Pit = this.getPit(columnIndex, rowIndex);
         if(Pit != null) {
             Pit.animateForCapture();
-            //this.VoiceCapture.play();
+            voiceCapture.play();
 
         }
     }
@@ -429,56 +484,103 @@ public class PlayBoard extends TView implements IPlayBoard {
      */
     @Override
     public final void showEndGameDialog(FinishCodeEnum caseCode, byte winnerIndex) throws TError {
-        // Input checking
+        // Input checkings
         if(caseCode == null) {
             throw new TError("The case code property should not be null!");
         }
-        if(winnerIndex < 1) {
-            throw new TError("The winner index property should not be less than 1!");
+        if(winnerIndex < 0) {
+            throw new TError("The winner index property should not be less than 0!");
         }
 
-        if(!this.getDataInstance().isPlayerExists(winnerIndex)) {
+        if((winnerIndex > 0) && (!this.getDataInstance().isPlayerExists(winnerIndex))) {
             throw new TError("The requested player index " + winnerIndex + " does not exist!");
         }
 
-        // Get the color of the winner
-        String winnerColor = this.getDataInstance().getPlayer(winnerIndex).getPlayerColor();
+        AnchorPane contentRoot = new AnchorPane();
+        if(winnerIndex > 0) {
 
-        // Generate a visula effect
-        RadialGradient playerColorFill = new RadialGradient(0, 0, 0.3, 0.3, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
-            new Stop(0, Color.web(winnerColor)),
-            new Stop(1, Color.BLACK)
-        });
+            // Get the color of the winner
+            String winnerColor = this.getDataInstance().getPlayer(winnerIndex).getPlayerColor();
 
-        // Generate a hexagon shape with the color of winner player
-        int centreX = 0;
-        int centreY = 0;
-        Double[] hexaCoordinates = {centreX + 30.0, 0.0 + centreY, centreX + 90.0, 0.0 + centreY, centreX + 120.0, 40.0 + centreY, centreX + 90.0, 80.0 + centreY, centreX + 30.0, 80.0 + centreY, centreX + 0.0, 40.0 + centreY};
+            // Generate a visula effect
+            RadialGradient playerColorFill = new RadialGradient(0, 0, 0.3, 0.3, 1, true, CycleMethod.NO_CYCLE, new Stop[]{
+                new Stop(0, Color.web(winnerColor)),
+                new Stop(1, Color.BLACK)
+            });
 
-        Polygon hexaShape = new Polygon();
-        hexaShape.getPoints().addAll(hexaCoordinates);
-        hexaShape.setFill(playerColorFill);
-        hexaShape.setId("PlayerShape");
-        hexaShape.setLayoutX(110);
-        hexaShape.setLayoutY(120);
+            DropShadow dropShadow = new DropShadow();
+            dropShadow.setRadius(10);
+            dropShadow.setColor(Color.GREY);
 
-        // Content
-        Text winnerText = new Text();
-        Group contentRoot = new Group();
+            // Generate a hexagon shape with the color of winner player
+            int centreX = 0;
+            int centreY = 0;
+            //Double[] hexaCoordinates = {centreX + 30.0, 0.0 + centreY, centreX + 90.0, 0.0 + centreY, centreX + 120.0, 40.0 + centreY, centreX + 90.0, 80.0 + centreY, centreX + 30.0, 80.0 + centreY, centreX + 0.0, 40.0 + centreY};
+            Double[] hexaCoordinates = {centreX + 15.0, 0.0 + centreY, centreX + 45.0, 0.0 + centreY, centreX + 60.0, 20.0 + centreY, centreX + 45.0, 40.0 + centreY, centreX + 15.0, 40.0 + centreY, centreX + 0.0, 20.0 + centreY};
 
-        contentRoot.getChildren().add(hexaShape);
-        contentRoot.getChildren().add(winnerText);
+            Polygon hexaShape = new Polygon();
+            hexaShape.getPoints().addAll(hexaCoordinates);
+            hexaShape.setFill(playerColorFill);
+            hexaShape.setId("PlayerShape");
+            hexaShape.setLayoutX(10);
+            hexaShape.setLayoutY(10);
+            hexaShape.setStrokeType(StrokeType.CENTERED);
+            hexaShape.setStroke(Color.BLACK);
+            hexaShape.setStrokeWidth(2);
+            hexaShape.setStrokeLineJoin(StrokeLineJoin.ROUND);
+            // hexaShape.setEffect(dropShadow);
+
+            // Content
+            Text winnerText = new Text("Is the winner!");
+            DropShadow dropShadow2 = new DropShadow();
+            dropShadow2.setRadius(10);
+            dropShadow2.setColor(Color.WHITE);
+            winnerText.setEffect(dropShadow2);
+            winnerText.setId("TTT");
+
+            // Adding to local roote
+            contentRoot.getChildren().add(hexaShape);
+            contentRoot.getChildren().add(winnerText);
+
+            contentRoot.setLeftAnchor(hexaShape, Double.valueOf(10));
+            contentRoot.setTopAnchor(hexaShape, Double.valueOf(10));
+            contentRoot.setLeftAnchor(winnerText, Double.valueOf(100));
+            contentRoot.setTopAnchor(winnerText, Double.valueOf(10));
+
+        }
+        else if(winnerIndex == 0) {
+            // Content
+            Text winnerText = new Text("It is a draw!");
+            DropShadow dropShadow2 = new DropShadow();
+            dropShadow2.setRadius(10);
+            dropShadow2.setColor(Color.WHITE);
+            //winnerText.setEffect(dropShadow2);
+            winnerText.setId("TTT");
+
+            contentRoot.getChildren().add(winnerText);
+            contentRoot.setLeftAnchor(winnerText, Double.valueOf(120));
+            contentRoot.setTopAnchor(winnerText, Double.valueOf(20));
+        }
+        else {
+            throw new TError("Unsupported value was found!");
+        }
 
         // Generate dialog
-        Alert dialog = new Alert(Alert.AlertType.NONE, "", ButtonType.OK);
-        dialog.initModality(Modality.APPLICATION_MODAL);
-        dialog.initStyle(StageStyle.TRANSPARENT);
+        endGameDialog.initModality(Modality.APPLICATION_MODAL);
+        endGameDialog.initStyle(StageStyle.TRANSPARENT);
+        endGameDialog.setTitle("End of game");
+        //endGameDialog.setHeight(100);
+        //endGameDialog.setWidth(300);
 
-        DialogPane dialogPane = dialog.getDialogPane();
-        //dialogPane.getStylesheets().add(getClass().getResource(ViewLayerIfc.CssDirectoryPath+"/GameFinishDialog.css").toExternalForm());
+        // Set the inside of the dialog
+        DialogPane dialogPane = endGameDialog.getDialogPane();
+        dialogPane.setId("dialog");
+        dialogPane.getStylesheets().add(PlayBoard.class.getResource(PlayBoard.folderCSS + "/general.css").toExternalForm());
         dialogPane.setHeader(contentRoot);
+        contentRoot.setId("content");
+        //DialogPane.getStylesheets().add(getClass().getResource(ViewLayerIfc.CssDirectoryPath+"/GameFinishDialog.css").toExternalForm());
 
-        dialog.show();
+        endGameDialog.show();
 
         /*String ColorString = "#000000";
 
@@ -647,9 +749,9 @@ public class PlayBoard extends TView implements IPlayBoard {
             //---Note:A poligin pontjainak megadása relatív koordinátákkal
             this.getPoints().addAll(new Double[]{
                 this.posX + 15.0, 0.0 + this.posY, //1
-                this.posX + 45.0, 0.0 + this.posY, //2
-                this.posX + 60.0, 20.0 + this.posY, //3
-                this.posX + 45.0, 40.0 + this.posY, //4
+                this.posX + 40.0, 0.0 + this.posY, //2
+                this.posX + 55.0, 20.0 + this.posY, //3
+                this.posX + 40.0, 40.0 + this.posY, //4
                 this.posX + 15.0, 40.0 + this.posY, //5
                 this.posX + 0.0, 20.0 + this.posY //6
             });
@@ -736,7 +838,7 @@ public class PlayBoard extends TView implements IPlayBoard {
                     this.setFill(PlayerColorFill);
 
                 }
-                else//Note: Ha az adott cellát nem foglalja játékos
+                if(Field.getPlayerIndex() == 0)//Note: Ha az adott cellát nem foglalja játékos
                 {
                     this.setFill(BoardPit.emptyBackgroundFill);
                 }
