@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FissionOperator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Hexxagon</a> &gt; <a href="index.source.html" class="el_package">Hexxagon.AI</a> &gt; <span class="el_source">FissionOperator.java</span></div><h1>FissionOperator.java</h1><pre class="source lang-java linenums">package Hexxagon.AI;
+
+import Support.TCoordinate2D;
+import Support.TError;
+import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Contains method of fission step applied on board state.
+ * A fission step never steps farer than a neighbour cell.
+ *
+ * @author Sandor Kalmanchey
+ * @version 1.0
+ * @since 1.0
+ */
+public final class FissionOperator extends Operator {
+
+    /**
+     * The logger.
+     */
+<span class="fc" id="L22">    private static final Logger logger = LoggerFactory.getLogger(FissionOperator.class);</span>
+
+    /**
+     * Relative values of attack coordinates.
+     */
+<span class="fc" id="L27">    private static final TCoordinate2D[] relativeCoordinatesOfAttackZone = {</span>
+        /*C-1*/new TCoordinate2D(-1, 0), new TCoordinate2D(-1, +1),
+        /*C0*/ new TCoordinate2D(0, -1), new TCoordinate2D(0, 1),
+        /*C+1*/ new TCoordinate2D(1, -1), new TCoordinate2D(1, 0)
+    };
+
+    /**
+     * Creates a {@code FissionOperator} instance.
+     *
+     * @param baseColumnIndex   Column index of base cell.
+     * @param baseRowIndex      Row index of base cell.
+     * @param targetColumnIndex Column index of destination cell.
+     * @param targetRowIndex    Row index of destination cell.
+     */
+    public FissionOperator(int baseColumnIndex, int baseRowIndex, int targetColumnIndex, int targetRowIndex) {
+<span class="fc" id="L42">        super(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex);</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Generates all available steps represented by this type of operator.
+     *
+     * @param boardState         The specified state on which all apliciable operator is generated.
+     * @param offeredPlayerIndex Index of supported player.
+     *
+     * @return A list operator in all possible variation.
+     *
+     * @throws TError Thrown if an unrecoverable error was occurred.
+     */
+    public static ArrayList&lt;IOperator&gt; generateAvailableOperatorsOnState(IBoardState boardState, byte offeredPlayerIndex) throws TError {
+        // Input checkings
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if(boardState == null) {</span>
+<span class="fc" id="L58">            throw new TError(&quot;Input parameter should not be null!&quot;);</span>
+        }
+
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">        if(!isValidBoardState(boardState)) {</span>
+<span class="nc" id="L62">            throw new TError(&quot;Invalid board was given!&quot;);</span>
+        }
+<span class="pc bpc" id="L64" title="3 of 4 branches missed.">        if(boardState.getActualPlayerIndex() != offeredPlayerIndex &amp;&amp; boardState.getEnemyPlayerIndex() != offeredPlayerIndex) {</span>
+<span class="nc" id="L65">            throw new TError(&quot;Invalid player index was given&quot;);</span>
+        }
+
+<span class="fc" id="L68">        ArrayList&lt;TCoordinate2D&gt; fromCoordinates = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L69">        ArrayList&lt;TCoordinate2D&gt; targetCoordinates = new ArrayList&lt;&gt;();</span>
+
+        //
+<span class="fc" id="L72">        byte[][] board = boardState.getBoard();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; board.length; columnIndex++) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; board[columnIndex].length; rowIndex++) {</span>
+<span class="fc" id="L75">                byte value = board[columnIndex][rowIndex];</span>
+
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">                if(value == offeredPlayerIndex) {</span>
+<span class="nc" id="L78">                    fromCoordinates.add(new TCoordinate2D(columnIndex, rowIndex));</span>
+                }
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">                else if(value == IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L81">                    targetCoordinates.add(new TCoordinate2D(columnIndex, rowIndex));</span>
+                }
+            }
+        }
+
+        //
+<span class="fc" id="L87">        ArrayList&lt;IOperator&gt; output = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        for(TCoordinate2D fromCoordinate : fromCoordinates) {</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            for(TCoordinate2D targetCoordinate : targetCoordinates) {</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">                if(isAttemptedCellInPossibleAttackRange(fromCoordinate.getX(), fromCoordinate.getY(), targetCoordinate.getX(), targetCoordinate.getY())) {</span>
+<span class="nc" id="L92">                    IOperator opr = new FissionOperator(fromCoordinate.getX(), fromCoordinate.getY(), targetCoordinate.getX(), targetCoordinate.getY());</span>
+<span class="nc" id="L93">                    output.add(opr);</span>
+                }
+<span class="nc" id="L95">            }</span>
+<span class="nc" id="L96">        }</span>
+
+<span class="fc" id="L98">        return output;</span>
+    }
+
+    /**
+     * Tells whether the distance is still belongs to a possibly valid range.
+     * Does not test whether the base or destination cell exist or not.
+     *
+     * @param baseColumnIndex      Column index of base cell.
+     * @param baseRowIndex         Row index of base cell.
+     * @param attemptedColumnIndex Column index of destination cell.
+     * @param attemptedRowIndex    Row index of destination cell.
+     *
+     * @return True if the step is in a apliciable range, true otherwise.
+     */
+    private static boolean isAttemptedCellInPossibleAttackRange(int baseColumnIndex, int baseRowIndex, int attemptedColumnIndex, int attemptedRowIndex) {
+
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        for(TCoordinate2D relativeCoordinate : FissionOperator.relativeCoordinatesOfAttackZone) {</span>
+
+            // Generate possible attack coordinates based on base cell
+<span class="fc" id="L117">            int possibleColumnIndex = baseColumnIndex + relativeCoordinate.getX();</span>
+<span class="fc" id="L118">            int possibleRowIndex = baseRowIndex + relativeCoordinate.getY();</span>
+
+<span class="fc bfc" id="L120" title="All 4 branches covered.">            if(attemptedColumnIndex == possibleColumnIndex &amp;&amp; attemptedRowIndex == possibleRowIndex) {</span>
+<span class="fc" id="L121">                return true;</span>
+            }
+        }
+<span class="nc" id="L124">        return false;</span>
+
+    }
+
+    /**
+     * Tells whether the destination cell is a neighbour cell of the base cell.
+     *
+     * @param baseColumnIndex      Column index of base cell.
+     * @param baseRowIndex         Row index of base cell.
+     * @param attemptedColumnIndex Column index of destination cell.
+     * @param attemptedRowIndex    Row index of destination cell.
+     *
+     * @return True if the destination cell is a neighbour cell of the base cell, false otherwise.
+     */
+    private static boolean isTargetedCellIsAnAdjecentCell(int baseColumnIndex, int baseRowIndex, int attemptedColumnIndex, int attemptedRowIndex) {
+
+        // Generate absolute adjecent coordinates based on base cell
+<span class="nc" id="L141">        ArrayList&lt;TCoordinate2D&gt; adjecentCells = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        for(TCoordinate2D relativeCoordinate : FissionOperator.relativeCoordinatesAdjacentCells) {</span>
+
+<span class="nc" id="L144">            int adjecentColumnIndex = baseColumnIndex + relativeCoordinate.getX();</span>
+<span class="nc" id="L145">            int adjecentRowIndex = baseRowIndex + relativeCoordinate.getY();</span>
+
+            // Store value
+<span class="nc" id="L148">            adjecentCells.add(new TCoordinate2D(adjecentColumnIndex, adjecentRowIndex));</span>
+        }
+
+        // Comparisation
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        for(TCoordinate2D adjecentCoordinate : adjecentCells) {</span>
+
+<span class="nc bnc" id="L154" title="All 4 branches missed.">            if(attemptedColumnIndex == adjecentCoordinate.getX() &amp;&amp; attemptedRowIndex == adjecentCoordinate.getY()) {</span>
+<span class="nc" id="L155">                return true;</span>
+            }
+<span class="nc" id="L157">        }</span>
+<span class="nc" id="L158">        return false;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean isApliciableOnState(IBoardState boardState) throws TError {
+
+        // Input checkings
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if(boardState == null) {</span>
+<span class="nc" id="L169">            throw new TError(&quot;Property sholud not be null!&quot;);</span>
+        }
+
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">        if(!isValidBoardState(boardState)) {</span>
+<span class="nc" id="L173">            throw new TError(&quot;Invalid board was given!&quot;);</span>
+        }
+
+        // If base cell does not exists
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        if(!boardState.isCellExists(baseColumnIndex, baseRowIndex)) {</span>
+<span class="nc" id="L178">            logger.debug(&quot;Reject:001&quot;);</span>
+<span class="nc" id="L179">            return false;</span>
+        }
+
+        // If target cell does not exists
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        if(!boardState.isCellExists(targetColumnIndex, targetRowIndex)) {</span>
+<span class="fc" id="L184">            logger.debug(&quot;Reject:002&quot;);</span>
+<span class="fc" id="L185">            return false;</span>
+        }
+
+        // If base and target cell are same
+<span class="pc bpc" id="L189" title="1 of 4 branches missed.">        if(baseColumnIndex == targetColumnIndex &amp;&amp; baseRowIndex == targetRowIndex) {</span>
+<span class="fc" id="L190">            logger.debug(&quot;Reject:003&quot;);</span>
+<span class="fc" id="L191">            return false;</span>
+        }
+
+        // The base cell is not occupied by the offered player
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">        if(boardState.getCellValue(baseColumnIndex, baseRowIndex) != boardState.getActualPlayerIndex()) {</span>
+<span class="nc" id="L196">            logger.debug(&quot;Reject:004-&gt;[&quot; + baseColumnIndex + &quot;,&quot; + baseRowIndex + &quot;]!=&quot; + boardState.getActualPlayerIndex());</span>
+<span class="nc" id="L197">            return false;</span>
+        }
+
+        // If target cell is not empty because occupied or inactive
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        if(boardState.getCellValue(targetColumnIndex, targetRowIndex) != IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L202">            logger.debug(&quot;Reject:005&quot;);</span>
+<span class="fc" id="L203">            return false;</span>
+        }
+
+        // Is the target cell in the attack zone
+<span class="pc bpc" id="L207" title="1 of 2 branches missed.">        if(!isAttemptedCellInPossibleAttackRange(baseColumnIndex, baseRowIndex, targetColumnIndex, targetRowIndex)) {</span>
+<span class="nc" id="L208">            logger.debug(&quot;Reject:006-&gt;[&quot; + baseColumnIndex + &quot;,&quot; + baseRowIndex + &quot;]:[&quot; + targetColumnIndex + &quot;,&quot; + targetRowIndex + &quot;]&quot;);</span>
+<span class="nc" id="L209">            return false;</span>
+        }
+
+<span class="fc" id="L212">        return true;</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final IBoardState applyIt(IBoardState boardState) throws TError {
+
+        // Input checkings
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">        if(boardState == null) {</span>
+<span class="nc" id="L223">            throw new TError(&quot;Property should not be null!&quot;);</span>
+        }
+
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        if(!this.isApliciableOnState(boardState)) {</span>
+<span class="fc" id="L227">            throw new TError(&quot;Operator is not appliciable on given state!&quot;);</span>
+        }
+
+        // Create new board and copy values from recent board
+<span class="fc" id="L231">        byte[][] actualBoard = boardState.getBoard();</span>
+<span class="fc" id="L232">        byte[][] newBoard = null;</span>
+<span class="fc bfc" id="L233" title="All 2 branches covered.">        for(int columnIndex = 0; columnIndex &lt; actualBoard.length; columnIndex++) {</span>
+<span class="fc bfc" id="L234" title="All 2 branches covered.">            for(int rowIndex = 0; rowIndex &lt; actualBoard[columnIndex].length; rowIndex++) {</span>
+                // Instantiation of the new array
+<span class="fc bfc" id="L236" title="All 2 branches covered.">                if(newBoard == null) {</span>
+<span class="fc" id="L237">                    newBoard = new byte[actualBoard.length][actualBoard[columnIndex].length];</span>
+                }
+
+<span class="fc" id="L240">                byte value = actualBoard[columnIndex][rowIndex];</span>
+<span class="fc" id="L241">                newBoard[columnIndex][rowIndex] = value;</span>
+            }
+        }
+<span class="fc" id="L244">        byte actualPlayerIndex = boardState.getActualPlayerIndex();</span>
+<span class="fc" id="L245">        byte nextPlayerIndex = boardState.getEnemyPlayerIndex();</span>
+<span class="fc" id="L246">        IBoardState newBoardState = new BoardState(newBoard, nextPlayerIndex);</span>
+
+        // Occupie the targeted cell
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if(newBoardState.getCellValue(this.targetColumnIndex, this.targetRowIndex) == IBoardState.symbolOfEmptyCell) {</span>
+<span class="fc" id="L250">            newBoardState.setCellValue(this.targetColumnIndex, this.targetRowIndex, actualPlayerIndex);</span>
+        }
+        else {
+<span class="nc" id="L253">            throw new TError(&quot;Invalid state was found!&quot;);</span>
+        }
+
+        // Occupie the adjacent and occupied cells around the target cell
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        for(TCoordinate2D relativeCoordinate : relativeCoordinatesAdjacentCells) {</span>
+
+<span class="fc" id="L259">            int adjacentCellColumnIndex = this.targetColumnIndex + relativeCoordinate.getX();</span>
+<span class="fc" id="L260">            int adjacentCellRowIndex = this.targetRowIndex + relativeCoordinate.getY();</span>
+
+<span class="fc bfc" id="L262" title="All 2 branches covered.">            if(newBoardState.isCellExists(adjacentCellColumnIndex, adjacentCellRowIndex)) {</span>
+
+<span class="fc bfc" id="L264" title="All 2 branches covered.">                if(newBoardState.isCellOccupied(adjacentCellColumnIndex, adjacentCellRowIndex)) {</span>
+<span class="fc" id="L265">                    newBoardState.setCellValue(adjacentCellColumnIndex, adjacentCellRowIndex, actualPlayerIndex);</span>
+                }
+            }
+        }
+
+<span class="fc" id="L270">        return newBoardState;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
