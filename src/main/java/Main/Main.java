@@ -49,10 +49,6 @@ public class Main extends Application {
     public static final String folderAudio = "/audio";
 
 
-	@Override
-    public void pauser(Stage primaryStage) throws TError {
-			bala bla
-	}
     /**
      * Starts the application launched by JavaFX framework.
      *
