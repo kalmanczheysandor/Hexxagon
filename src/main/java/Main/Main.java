@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The main class of the whole application.
- *
+ * ide a netbeans jon
  * @author Sandor Kalmanchey
  * @version 2.0
  * @since 2.0
